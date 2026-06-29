@@ -28,7 +28,7 @@ body{
   box-shadow:0 6px 20px rgba(0,0,0,.12);
   margin-bottom:20px;
 }
-h1,h2{
+h1{
   text-align:center;
   margin:10px 0 20px;
 }
@@ -58,7 +58,7 @@ textarea{
 }
 .btns{
   display:grid;
-  grid-template-columns:1fr 1fr 1fr;
+  grid-template-columns:1fr 1fr;
   gap:10px;
   margin-top:18px;
 }
@@ -70,7 +70,6 @@ button{
   border-radius:10px;
   cursor:pointer;
 }
-.primary{background:#0b63ce;color:white;}
 .dark{background:#111;color:white;}
 .gray{background:#ddd;color:#111;}
 .previewBox{
@@ -115,26 +114,30 @@ button{
   background:#f0f0f0;
   font-weight:bold;
 }
+.docTitle{
+  margin-top:28px;
+  font-size:20px;
+  font-weight:bold;
+  border-bottom:2px solid #111;
+  padding-bottom:6px;
+}
 .docImg{
-  margin-top:25px;
+  margin-top:15px;
   border:1px solid #333;
-  min-height:260px;
+  min-height:330px;
   display:flex;
   align-items:center;
   justify-content:center;
+  background:#fff;
 }
 .docImg img{
   max-width:100%;
-  max-height:330px;
-}
-.sign{
-  margin-top:40px;
-  display:flex;
-  justify-content:space-between;
+  max-height:390px;
 }
 .small{
   font-size:13px;
   color:#666;
+  line-height:1.7;
 }
 @media(max-width:850px){
   .grid{grid-template-columns:1fr;}
@@ -146,7 +149,7 @@ button{
   }
 }
 @media print{
-  .card:first-child{display:none;}
+  .inputCard{display:none;}
   body{background:white;}
   .wrap{margin:0;padding:0;}
   .card{box-shadow:none;margin:0;padding:0;}
@@ -158,7 +161,7 @@ button{
 <body>
 <div class="wrap">
 
-<div class="card">
+<div class="card inputCard">
 <h1>取引確認書 作成画面</h1>
 
 <div class="grid">
@@ -223,7 +226,7 @@ button{
 
 <div>
 <label>本人確認書類番号</label>
-<input id="docNo" placeholder="免許証番号など">
+<input id="docNo" placeholder="免許証番号・カード番号など">
 </div>
 
 <div class="full">
@@ -243,7 +246,6 @@ button{
 </div>
 
 <div class="btns">
-<button class="primary" onclick="saveCustomer()">顧客保存</button>
 <button class="dark" onclick="makePDF()">PDF保存</button>
 <button class="gray" onclick="window.print()">印刷</button>
 </div>
@@ -267,19 +269,15 @@ button{
 <div class="head">備考</div><div id="pMemo"></div>
 </div>
 
-<h2>本人確認書類</h2>
+<div class="docTitle">本人確認書類</div>
 <div class="docImg">
 <img id="pPreview">
-</div>
-
-<div class="sign">
-<div>確認者署名：________________</div>
-<div>お客様署名：________________</div>
 </div>
 
 <p class="small">
 上記内容に基づき、本人確認および取引確認を行いました。
 </p>
+
 </div>
 </div>
 
@@ -347,39 +345,28 @@ fileInput.addEventListener("change", async function(e){
     const viewport = page.getViewport({scale:2});
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    await page.render({canvasContext:ctx, viewport:viewport}).promise;
+
+    await page.render({
+      canvasContext:ctx,
+      viewport:viewport
+    }).promise;
+
     const img = canvas.toDataURL("image/png");
     preview.src = img;
     pPreview.src = img;
   }
 });
 
-function saveCustomer(){
-  const data = {
-    name:name.value,
-    address:address.value,
-    birthday:birthday.value,
-    docType:docType.value,
-    docNo:docNo.value,
-    memo:memo.value,
-    date:tradeDate.value
-  };
+async function makePDF(){
+  updatePaper();
 
-  if(!data.name){
+  if(!name.value){
     alert("氏名を入力してください");
     return;
   }
-
-  let customers = JSON.parse(localStorage.getItem("customers") || "[]");
-  customers.push(data);
-  localStorage.setItem("customers", JSON.stringify(customers));
-  alert("顧客情報をこの端末に保存しました");
-}
-
-async function makePDF(){
-  updatePaper();
 
   const { jsPDF } = window.jspdf;
   const paperEl = document.getElementById("paper");
@@ -399,4 +386,3 @@ async function makePDF(){
 
 </body>
 </html>
-
