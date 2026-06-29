@@ -8,152 +8,46 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial,"Hiragino Sans","Yu Gothic",sans-serif;
-  background:#eef1f5;
-  color:#222;
-}
-.wrap{
-  max-width:1100px;
-  margin:20px auto;
-  padding:15px;
-}
-.card{
-  background:white;
-  border-radius:16px;
-  padding:22px;
-  box-shadow:0 6px 20px rgba(0,0,0,.12);
-  margin-bottom:20px;
-}
-h1{
-  text-align:center;
-  margin:10px 0 20px;
-}
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:14px;
-}
-label{
-  font-weight:bold;
-  display:block;
-  margin-bottom:5px;
-}
-input,select,textarea{
-  width:100%;
-  padding:11px;
-  font-size:16px;
-  box-sizing:border-box;
-  border:1px solid #bbb;
-  border-radius:8px;
-}
-textarea{
-  min-height:90px;
-}
-.full{
-  grid-column:1 / -1;
-}
-.btns{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-  margin-top:18px;
-}
-button{
-  padding:14px;
-  font-size:16px;
-  font-weight:bold;
-  border:none;
-  border-radius:10px;
-  cursor:pointer;
-}
-.dark{background:#111;color:white;}
-.gray{background:#ddd;color:#111;}
-.previewBox{
-  border:2px dashed #999;
-  border-radius:12px;
-  padding:12px;
-  background:#fafafa;
-  text-align:center;
-}
-.previewBox img{
-  max-width:100%;
-  max-height:300px;
-}
-.paper{
-  width:794px;
-  min-height:1123px;
-  background:white;
-  margin:20px auto;
-  padding:50px;
-  box-sizing:border-box;
-  border:1px solid #ccc;
-}
-.paper h1{
-  letter-spacing:8px;
-  border-bottom:3px double #111;
-  padding-bottom:12px;
-}
-.info{
-  display:grid;
-  grid-template-columns:180px 1fr;
-  border-top:1px solid #333;
-  border-left:1px solid #333;
-  margin-top:25px;
-}
-.info div{
-  padding:11px;
-  border-right:1px solid #333;
-  border-bottom:1px solid #333;
-  min-height:24px;
-}
-.head{
-  background:#f0f0f0;
-  font-weight:bold;
-}
-.docTitle{
-  margin-top:28px;
-  font-size:20px;
-  font-weight:bold;
-  border-bottom:2px solid #111;
-  padding-bottom:6px;
-}
-.docImg{
-  margin-top:15px;
-  border:1px solid #333;
-  min-height:330px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:#fff;
-}
-.docImg img{
-  max-width:100%;
-  max-height:390px;
-}
-.small{
-  font-size:13px;
-  color:#666;
-  line-height:1.7;
-}
+body{margin:0;font-family:Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:#eef1f5;color:#222}
+.wrap{max-width:1100px;margin:20px auto;padding:15px}
+.card{background:white;border-radius:16px;padding:22px;box-shadow:0 6px 20px rgba(0,0,0,.12);margin-bottom:20px}
+h1{text-align:center;margin:10px 0 20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{font-weight:bold;display:block;margin-bottom:5px}
+input,select,textarea{width:100%;padding:11px;font-size:16px;box-sizing:border-box;border:1px solid #bbb;border-radius:8px}
+textarea{min-height:90px}
+.full{grid-column:1 / -1}
+.btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px}
+button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10px;cursor:pointer}
+.blue{background:#0b63ce;color:white}
+.dark{background:#111;color:white}
+.gray{background:#ddd;color:#111}
+.previewBox{border:2px dashed #999;border-radius:12px;padding:12px;background:#fafafa;text-align:center}
+.previewBox img{max-width:100%;max-height:300px}
+.ocrBox{background:#fff8df;border:2px solid #e3c45f;border-radius:12px;padding:12px;margin-top:12px}
+.paper{width:794px;min-height:1123px;background:white;margin:20px auto;padding:50px;box-sizing:border-box;border:1px solid #ccc}
+.paper h1{letter-spacing:8px;border-bottom:3px double #111;padding-bottom:12px}
+.info{display:grid;grid-template-columns:180px 1fr;border-top:1px solid #333;border-left:1px solid #333;margin-top:25px}
+.info div{padding:11px;border-right:1px solid #333;border-bottom:1px solid #333;min-height:24px}
+.head{background:#f0f0f0;font-weight:bold}
+.docTitle{margin-top:28px;font-size:20px;font-weight:bold;border-bottom:2px solid #111;padding-bottom:6px}
+.docImg{margin-top:15px;border:1px solid #333;min-height:330px;display:flex;align-items:center;justify-content:center;background:#fff}
+.docImg img{max-width:100%;max-height:390px}
+.small{font-size:13px;color:#666;line-height:1.7}
 @media(max-width:850px){
-  .grid{grid-template-columns:1fr;}
-  .btns{grid-template-columns:1fr;}
-  .paper{
-    width:100%;
-    min-height:auto;
-    padding:25px;
-  }
+  .grid{grid-template-columns:1fr}
+  .btns{grid-template-columns:1fr}
+  .paper{width:100%;min-height:auto;padding:25px}
 }
 @media print{
-  .inputCard{display:none;}
-  body{background:white;}
-  .wrap{margin:0;padding:0;}
-  .card{box-shadow:none;margin:0;padding:0;}
-  .paper{border:none;margin:0;width:100%;}
+  .inputCard{display:none}
+  body{background:white}
+  .wrap{margin:0;padding:0}
+  .card{box-shadow:none;margin:0;padding:0}
+  .paper{border:none;margin:0;width:100%}
 }
 </style>
 </head>
@@ -238,9 +132,19 @@ button{
 <label>本人確認書類 PDF / 画像アップロード</label>
 <input type="file" id="fileInput" accept="image/*,application/pdf">
 <p class="small">PDFの場合は1ページ目を画像化して表示します。</p>
+
 <div class="previewBox">
 <img id="preview" alt="ここに確認書類が表示されます">
 </div>
+
+<button class="blue" onclick="runOCR()" style="margin-top:12px;width:100%;">OCRで文字を読み取る</button>
+
+<div class="ocrBox">
+<label>OCR読み取り結果</label>
+<textarea id="ocrText" placeholder="ここに読み取った文字が表示されます"></textarea>
+<p class="small">読み取り結果を見ながら、氏名・住所・生年月日・番号を手入力してください。</p>
+</div>
+
 </div>
 
 </div>
@@ -248,6 +152,7 @@ button{
 <div class="btns">
 <button class="dark" onclick="makePDF()">PDF保存</button>
 <button class="gray" onclick="window.print()">印刷</button>
+<button class="gray" onclick="clearForm()">入力クリア</button>
 </div>
 
 </div>
@@ -286,6 +191,8 @@ button{
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+let ocrImageData = "";
 
 const ids = [
 "receiptNo","tradeDate","template","staff","name",
@@ -335,6 +242,7 @@ fileInput.addEventListener("change", async function(e){
     const url = URL.createObjectURL(file);
     preview.src = url;
     pPreview.src = url;
+    ocrImageData = url;
     return;
   }
 
@@ -357,8 +265,39 @@ fileInput.addEventListener("change", async function(e){
     const img = canvas.toDataURL("image/png");
     preview.src = img;
     pPreview.src = img;
+    ocrImageData = img;
   }
 });
+
+async function runOCR(){
+  if(!ocrImageData){
+    alert("先に本人確認書類をアップロードしてください");
+    return;
+  }
+
+  ocrText.value = "読み取り中です。少し待ってください…";
+
+  try{
+    const result = await Tesseract.recognize(
+      ocrImageData,
+      "jpn+eng",
+      {
+        logger: m => {
+          if(m.status === "recognizing text"){
+            const p = Math.round(m.progress * 100);
+            ocrText.value = "OCR読み取り中… " + p + "%";
+          }
+        }
+      }
+    );
+
+    ocrText.value = result.data.text || "文字を読み取れませんでした。画像を明るく、まっすぐ撮って再試行してください。";
+
+  }catch(err){
+    ocrText.value = "OCRでエラーが出ました。画像で再アップロードして試してください。";
+    console.error(err);
+  }
+}
 
 async function makePDF(){
   updatePaper();
@@ -381,6 +320,22 @@ async function makePDF(){
 
   pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
   pdf.save("取引確認書_" + receiptNo.value + ".pdf");
+}
+
+function clearForm(){
+  if(!confirm("入力内容をクリアしますか？")) return;
+
+  name.value = "";
+  birthday.value = "";
+  address.value = "";
+  docNo.value = "";
+  memo.value = "";
+  ocrText.value = "";
+  preview.removeAttribute("src");
+  pPreview.removeAttribute("src");
+  receiptNo.value = makeReceiptNo();
+  tradeDate.value = todayStr();
+  updatePaper();
 }
 </script>
 
