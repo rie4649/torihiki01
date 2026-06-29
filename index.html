@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>取引確認書作成</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background:#f3f3f3;
+  margin:0;
+  padding:20px;
+}
+.app{
+  max-width:900px;
+  margin:auto;
+  background:white;
+  padding:20px;
+  border-radius:12px;
+}
+label{
+  display:block;
+  margin-top:12px;
+  font-weight:bold;
+}
+input,select{
+  width:100%;
+  padding:10px;
+  font-size:16px;
+  box-sizing:border-box;
+}
+button{
+  margin-top:20px;
+  padding:14px;
+  width:100%;
+  font-size:18px;
+  background:#111;
+  color:white;
+  border:none;
+  border-radius:8px;
+}
+.paper{
+  width:794px;
+  min-height:1123px;
+  background:white;
+  padding:50px;
+  margin:25px auto;
+  box-sizing:border-box;
+  border:1px solid #ccc;
+}
+h1{
+  text-align:center;
+  letter-spacing:8px;
+}
+.row{
+  margin:18px 0;
+  font-size:18px;
+}
+.licenseBox{
+  width:500px;
+  height:320px;
+  border:2px solid #333;
+  margin-top:15px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:white;
+}
+.licenseBox img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+.note{
+  margin-top:40px;
+  font-size:14px;
+  line-height:1.8;
+}
+@media print{
+  body{background:white;padding:0;}
+  .app{box-shadow:none;}
+  .inputArea,button{display:none;}
+  .paper{border:none;margin:0;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <div class="inputArea">
+    <h2>取引確認書 作成画面</h2>
+
+    <label>取引日</label>
+    <input type="date" id="tradeDate">
+
+    <label>テンプレート</label>
+    <select id="template">
+      <option>最新テンプレート</option>
+      <option>通常取引</option>
+      <option>本人確認あり</option>
+      <option>現金取引</option>
+    </select>
+
+    <label>氏名</label>
+    <input type="text" id="name">
+
+    <label>住所</label>
+    <input type="text" id="address">
+
+    <label>生年月日</label>
+    <input type="date" id="birthday">
+
+    <label>確認書類</label>
+    <select id="docType">
+      <option>運転免許証</option>
+      <option>マイナンバーカード</option>
+      <option>健康保険証</option>
+      <option>在留カード</option>
+      <option>その他</option>
+    </select>
+
+    <label>免許証番号</label>
+    <input type="text" id="licenseNo">
+
+    <label>免許証PDF / 画像アップロード</label>
+    <input type="file" id="licenseFile" accept="application/pdf,image/*">
+
+    <button onclick="makePDF()">PDF保存する</button>
+  </div>
+
+  <div id="paper" class="paper">
+    <h1>取引確認書</h1>
+
+    <div class="row">取引日：<span id="outDate"></span></div>
+    <div class="row">テンプレート：<span id="outTemplate"></span></div>
+    <div class="row">氏名：<span id="outName"></span></div>
+    <div class="row">住所：<span id="outAddress"></span></div>
+    <div class="row">生年月日：<span id="outBirthday"></span></div>
+    <div class="row">確認書類：<span id="outDocType"></span></div>
+    <div class="row">免許証番号：<span id="outLicenseNo"></span></div>
+
+    <div class="row">確認書類画像：</div>
+    <div class="licenseBox">
+      <img id="licensePreview">
+    </div>
+
+    <div class="note">
+      上記内容に基づき、本人確認および取引確認を行いました。<br><br>
+      担当者：____________________
+    </div>
+  </div>
+
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const tradeDate = document.getElementById("tradeDate");
+tradeDate.valueAsDate = new Date();
+
+const inputs = [
+  "tradeDate","template","name","address",
+  "birthday","docType","licenseNo"
+];
+
+inputs.forEach(id=>{
+  document.getElementById(id).addEventListener("input", updatePaper);
+});
+
+function updatePaper(){
+  document.getElementById("outDate").textContent = tradeDate.value;
+  document.getElementById("outTemplate").textContent = template.value;
+  document.getElementById("outName").textContent = name.value;
+  document.getElementById("outAddress").textContent = address.value;
+  document.getElementById("outBirthday").textContent = birthday.value;
+  document.getElementById("outDocType").textContent = docType.value;
+  document.getElementById("outLicenseNo").textContent = licenseNo.value;
+}
+updatePaper();
+
+document.getElementById("licenseFile").addEventListener("change", async function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const preview = document.getElementById("licensePreview");
+
+  if(file.type.startsWith("image/")){
+    preview.src = URL.createObjectURL(file);
+    return;
+  }
+
+  if(file.type === "application/pdf"){
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+    const page = await pdf.getPage(1);
+
+    const viewport = page.getViewport({scale:2});
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+      canvasContext:ctx,
+      viewport:viewport
+    }).promise;
+
+    preview.src = canvas.toDataURL("image/png");
+  }
+});
+
+async function makePDF(){
+  updatePaper();
+
+  const paper = document.getElementById("paper");
+  const canvas = await html2canvas(paper, {scale:2});
+  const imgData = canvas.toDataURL("image/png");
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("p","mm","a4");
+
+  pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
+  pdf.save("取引確認書.pdf");
+}
+</script>
+
+</body>
+</html>
