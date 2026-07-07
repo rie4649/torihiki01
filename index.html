@@ -1,15 +1,16 @@
-<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>取引確認書</title>
-
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111111">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
 <style>
 body{margin:0;font-family:Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:#eef1f5;color:#222}
 .wrap{max-width:1100px;margin:20px auto;padding:15px}
@@ -26,88 +27,152 @@ button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10
 .dark{background:#111;color:white}
 .gray{background:#ddd;color:#111}
 .previewBox{border:2px dashed #999;border-radius:12px;padding:12px;background:#fafafa;text-align:center}
-.previewBox img{max-width:100%;max-height:300px}
 .ocrBox{background:#fff8df;border:2px solid #e3c45f;border-radius:12px;padding:12px;margin-top:12px}
+.ocrBox .synced{font-size:13px;color:#0b63ce;font-weight:bold;margin-top:6px}
+/* 運転免許証・マイナンバーカード等はISO/IEC 7810 ID-1規格(85.6mm×54mm)なので、
+   その比率の枠に収めて表示する */
+.idcard-frame{
+width:100%;
+max-width:340px;
+aspect-ratio:85.6/54;
+margin:10px auto 0;
+border:1px solid #333;
+border-radius:10px;
+background:#fff repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 10px,#fff 10px,#fff 20px);
+display:flex;align-items:center;justify-content:center;
+overflow:hidden;
+}
+.idcard-frame img{width:100%;height:100%;object-fit:contain;background:#fff}
+.idcard-label{font-size:12px;color:#888;margin-top:6px}
 .paper{width:794px;min-height:1123px;background:white;margin:20px auto;padding:50px;box-sizing:border-box;border:1px solid #ccc}
 .paper h1{letter-spacing:8px;border-bottom:3px double #111;padding-bottom:12px}
 .info{display:grid;grid-template-columns:180px 1fr;border-top:1px solid #333;border-left:1px solid #333;margin-top:25px}
 .info div{padding:11px;border-right:1px solid #333;border-bottom:1px solid #333;min-height:24px}
 .head{background:#f0f0f0;font-weight:bold}
 .docTitle{margin-top:28px;font-size:20px;font-weight:bold;border-bottom:2px solid #111;padding-bottom:6px}
-.docImg{margin-top:15px;border:1px solid #333;min-height:330px;display:flex;align-items:center;justify-content:center;background:#fff}
-.docImg img{max-width:100%;max-height:390px}
+.docImg{margin-top:15px;padding:14px;border:1px solid #333;background:#fff}
 .small{font-size:13px;color:#666;line-height:1.7}
 @media(max-width:850px){
-  .grid{grid-template-columns:1fr}
-  .btns{grid-template-columns:1fr}
-  .paper{width:100%;min-height:auto;padding:25px}
+.grid{grid-template-columns:1fr}
+.btns{grid-template-columns:1fr}
+.paper{width:100%;min-height:auto;padding:25px}
 }
 @media print{
-  .inputCard{display:none}
-  body{background:white}
-  .wrap{margin:0;padding:0}
-  .card{box-shadow:none;margin:0;padding:0}
-  .paper{border:none;margin:0;width:100%}
+.inputCard{display:none}
+body{background:white}
+.wrap{margin:0;padding:0}
+.card{box-shadow:none;margin:0;padding:0}
+.paper{border:none;margin:0;width:100%}
+.appbar{display:none}
 }
+
+.appbar-right{display:flex;align-items:center;gap:4px}
+.install-btn{background:#0b63ce !important}
+.install-btn:hover{background:#0b63ce;filter:brightness(1.15)}
+
+.overlay{
+position:fixed;inset:0;background:rgba(0,0,0,.5);
+display:flex;align-items:center;justify-content:center;
+z-index:200;padding:20px;
+}
+.overlay.hidden{display:none}
+.overlay-card{
+background:#fff;border-radius:14px;padding:22px;
+width:100%;max-width:360px;
+}
+.overlay-card h3{margin:0 0 10px}
+
+/* ===== アプリバー(戻る／設定) ===== */
+.appbar{
+position:sticky;top:0;z-index:100;
+background:#111;color:#fff;
+display:flex;align-items:center;justify-content:space-between;
+padding:12px 16px;
+}
+.appbar-title{font-weight:bold;font-size:16px;letter-spacing:2px}
+.appbar-btn{
+background:none;border:none;color:#fff;
+font-size:15px;font-weight:bold;padding:8px 10px;
+cursor:pointer;border-radius:8px;
+display:flex;align-items:center;gap:6px;
+width:auto;
+}
+.appbar-btn:hover{background:rgba(255,255,255,.15)}
+.appbar-spacer{width:70px}
+
+/* ===== 画面切り替え ===== */
+.screen.hidden{display:none}
+
+/* ===== 設定画面 ===== */
+.manageList{display:flex;flex-direction:column;gap:8px;margin:10px 0 18px}
+.manageRow{
+display:flex;align-items:center;justify-content:space-between;
+background:#f5f5f7;border-radius:8px;padding:10px 14px;
+}
+.manageRow span{font-size:15px}
+.manageRow button{
+width:auto;padding:7px 14px;font-size:13px;
+background:#e4463c;color:#fff;border-radius:6px;
+}
+.addRow{display:flex;gap:8px}
+.addRow input{flex:1}
+.addRow button{width:auto;padding:11px 20px}
+.settingsSection h3{margin:6px 0 8px;font-size:16px}
+.emptyNote{color:#888;font-size:13px;margin:4px 0 10px}
+hr.sep{border:none;border-top:1px solid #ddd;margin:22px 0}
 </style>
 </head>
-
 <body>
-<div class="wrap">
+<div class="appbar">
+<button class="appbar-btn" id="backBtn" style="visibility:hidden">← 戻る</button>
+<div class="appbar-title">取引確認書</div>
+<div class="appbar-right">
+<button class="appbar-btn install-btn" id="installBtn" style="display:none">📲 アプリを追加</button>
+<button class="appbar-btn" id="settingsBtn">⚙ 設定</button>
+</div>
+</div>
 
+<div id="installHelp" class="overlay hidden">
+<div class="overlay-card">
+<h3>アプリとして追加する方法</h3>
+<p id="installHelpText" class="small"></p>
+<button class="gray" id="closeInstallHelp" style="margin-top:14px;width:100%;">閉じる</button>
+</div>
+</div>
+
+<div id="mainScreen" class="screen">
+<div class="wrap">
 <div class="card inputCard">
 <h1>取引確認書 作成画面</h1>
-
 <div class="grid">
-
 <div>
 <label>受付番号</label>
 <input id="receiptNo" readonly>
 </div>
-
 <div>
 <label>取引日</label>
 <input type="date" id="tradeDate">
 </div>
-
 <div>
 <label>テンプレート</label>
-<select id="template">
-<option>最新テンプレート</option>
-<option>通常取引</option>
-<option>本人確認あり</option>
-<option>現金取引</option>
-<option>貴金属取引</option>
-<option>ブランド品取引</option>
-</select>
+<select id="template"></select>
 </div>
-
 <div>
 <label>担当者</label>
-<select id="staff">
-<option>古川</option>
-<option>石原</option>
-<option>宮嶋</option>
-<option>長村</option>
-<option>川村</option>
-</select>
+<select id="staff"></select>
 </div>
-
 <div>
 <label>氏名</label>
 <input id="name" placeholder="例：川村 理絵">
 </div>
-
 <div>
 <label>生年月日</label>
 <input type="date" id="birthday">
 </div>
-
 <div class="full">
 <label>住所</label>
 <input id="address" placeholder="住所を入力">
 </div>
-
 <div>
 <label>確認書類</label>
 <select id="docType">
@@ -117,50 +182,42 @@ button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10
 <option>その他</option>
 </select>
 </div>
-
 <div>
 <label>本人確認書類番号</label>
 <input id="docNo" placeholder="免許証番号・カード番号など">
 </div>
-
 <div class="full">
 <label>備考欄</label>
 <textarea id="memo" placeholder="取引内容・査定内容・注意事項など"></textarea>
 </div>
-
 <div class="full">
 <label>本人確認書類 PDF / 画像アップロード</label>
 <input type="file" id="fileInput" accept="image/*,application/pdf">
 <p class="small">PDFや画像の白い余白をできるだけ自動でカットして表示します。</p>
-
 <div class="previewBox">
+<div class="idcard-frame">
 <img id="preview" alt="ここに確認書類が表示されます">
 </div>
-
+<p class="idcard-label">免許証・マイナンバーカードのサイズ比率(85.6mm×54mm)で表示しています</p>
+</div>
 <button class="blue" onclick="runOCR()" style="margin-top:12px;width:100%;">OCRで文字を読み取る</button>
-
 <div class="ocrBox">
 <label>OCR読み取り結果</label>
 <textarea id="ocrText" placeholder="ここに読み取った文字が表示されます"></textarea>
-<p class="small">読み取り結果を見ながら、氏名・住所・生年月日・番号を手入力してください。</p>
+<p class="small">氏名・住所・生年月日・番号を自動で読み取り、空欄のフォームに反映します。反映後も内容は手動で修正できます。</p>
+<div class="synced" id="syncedNote"></div>
 </div>
-
 </div>
-
 </div>
-
 <div class="btns">
 <button class="dark" onclick="makePDF()">PDF保存</button>
 <button class="gray" onclick="window.print()">印刷</button>
 <button class="gray" onclick="clearForm()">入力クリア</button>
 </div>
-
 </div>
-
 <div class="card">
 <div id="paper" class="paper">
 <h1>取引確認書</h1>
-
 <div class="info">
 <div class="head">受付番号</div><div id="pReceipt"></div>
 <div class="head">取引日</div><div id="pDate"></div>
@@ -173,240 +230,537 @@ button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10
 <div class="head">担当者</div><div id="pStaff"></div>
 <div class="head">備考</div><div id="pMemo"></div>
 </div>
-
 <div class="docTitle">本人確認書類</div>
 <div class="docImg">
+<div class="idcard-frame">
 <img id="pPreview">
 </div>
-
+</div>
 <p class="small">上記内容に基づき、本人確認および取引確認を行いました。</p>
-
+</div>
+</div>
 </div>
 </div>
 
+<div id="settingsScreen" class="screen hidden">
+<div class="wrap">
+<div class="card">
+<h1>設定</h1>
+
+<div class="settingsSection">
+<h3>担当者の管理</h3>
+<div id="staffList" class="manageList"></div>
+<div class="addRow">
+<input type="text" id="newStaffName" placeholder="担当者名を入力(例：山田)">
+<button class="blue" id="addStaffBtn">追加</button>
+</div>
+</div>
+
+<hr class="sep">
+
+<div class="settingsSection">
+<h3>テンプレートの管理</h3>
+<div id="templateList" class="manageList"></div>
+<div class="addRow">
+<input type="text" id="newTemplateName" placeholder="テンプレート名を入力">
+<button class="blue" id="addTemplateBtn">追加</button>
+</div>
+</div>
+</div>
+</div>
 </div>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
 let ocrImageData = "";
+
+/* ===== アプリとして追加(PWAインストール) ===== */
+if("serviceWorker" in navigator){
+window.addEventListener("load", ()=>{
+navigator.serviceWorker.register("sw.js").catch(()=>{});
+});
+}
+
+let deferredInstallPrompt = null;
+const installBtn = document.getElementById("installBtn");
+let autoPromptTried = false;
+
+/* アプリを開いた瞬間に、自動でインストール確認を出す(対応ブラウザのみ) */
+async function tryAutoPrompt(){
+if(autoPromptTried || !deferredInstallPrompt) return;
+autoPromptTried = true;
+try{
+deferredInstallPrompt.prompt();
+const choice = await deferredInstallPrompt.userChoice;
+if(choice.outcome === "accepted"){
+installBtn.style.display = "none";
+}
+deferredInstallPrompt = null;
+}catch(err){
+console.error("auto install prompt failed", err);
+}
+}
+
+window.addEventListener("beforeinstallprompt", (e)=>{
+e.preventDefault();
+deferredInstallPrompt = e;
+installBtn.style.display = "inline-flex";
+/* ブラウザがこのタイミングで自動表示を許可していれば、すぐに確認ポップアップを出す */
+tryAutoPrompt();
+});
+
+window.addEventListener("appinstalled", ()=>{
+installBtn.style.display = "none";
+deferredInstallPrompt = null;
+});
+
+function detectManualInstallText(){
+const ua = navigator.userAgent;
+const isMac = /Macintosh/.test(ua);
+const isWin = /Windows/.test(ua);
+const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
+if(isSafari && isMac){
+return "Safariのメニューバーで「ファイル」→「Dockに追加」を選んでください。(Safari 17以降)";
+}
+if(isSafari){
+return "共有ボタン(□に↑のアイコン)をタップし、「ホーム画面に追加」を選んでください。";
+}
+if(isWin || isMac){
+return "アドレスバー右端の「インストール」アイコン(⊕やモニターのマーク)をクリックしてください。表示されない場合は、ブラウザ右上のメニュー(⋮)から「アプリをインストール」を選んでください。";
+}
+return "ブラウザのメニューから「ホーム画面に追加」または「インストール」を選んでください。";
+}
+
+installBtn.addEventListener("click", async ()=>{
+if(deferredInstallPrompt){
+deferredInstallPrompt.prompt();
+const choice = await deferredInstallPrompt.userChoice;
+deferredInstallPrompt = null;
+if(choice.outcome === "accepted") installBtn.style.display = "none";
+return;
+}
+document.getElementById("installHelpText").textContent = detectManualInstallText();
+document.getElementById("installHelp").classList.remove("hidden");
+});
+
+document.getElementById("closeInstallHelp").onclick = ()=>{
+document.getElementById("installHelp").classList.add("hidden");
+};
+
+/* Chrome/Edge以外(Safariなど)では自動インストールのイベントが飛んでこないため、
+   ボタン自体は常に表示しておき、押した時に自動 or 手動案内のどちらかを行う */
+if(!("onbeforeinstallprompt" in window)){
+installBtn.style.display = "inline-flex";
+}
+
+/* ===== 担当者・テンプレートの管理(設定画面) ===== */
+const DEFAULT_STAFF = ["古川","石原","宮嶋","長村","川村"];
+const DEFAULT_TEMPLATES = ["最新テンプレート","通常取引","本人確認あり","現金取引","貴金属取引","ブランド品取引"];
+
+function loadList(key, def){
+try{
+const raw = localStorage.getItem(key);
+if(raw){
+const arr = JSON.parse(raw);
+if(Array.isArray(arr) && arr.length) return arr;
+}
+}catch(e){}
+return def.slice();
+}
+function saveList(key, arr){
+try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
+}
+
+let staffListData = loadList("torihiki_staffList", DEFAULT_STAFF);
+let templateListData = loadList("torihiki_templateList", DEFAULT_TEMPLATES);
+
+function renderSelectOptions(selectEl, arr, keepValue){
+const prev = keepValue ? selectEl.value : null;
+selectEl.innerHTML = "";
+arr.forEach(v=>{
+const opt = document.createElement("option");
+opt.textContent = v;
+selectEl.appendChild(opt);
+});
+if(prev && arr.includes(prev)) selectEl.value = prev;
+}
+
+function renderManageList(containerId, arr, onDelete){
+const container = document.getElementById(containerId);
+container.innerHTML = "";
+if(arr.length === 0){
+container.innerHTML = '<p class="emptyNote">まだ登録がありません</p>';
+return;
+}
+arr.forEach((val, idx)=>{
+const row = document.createElement("div");
+row.className = "manageRow";
+const span = document.createElement("span");
+span.textContent = val;
+const btn = document.createElement("button");
+btn.textContent = "削除";
+btn.onclick = ()=> onDelete(idx, val);
+row.appendChild(span);
+row.appendChild(btn);
+container.appendChild(row);
+});
+}
+
+function renderStaffManageList(){
+renderManageList("staffList", staffListData, (idx, val)=>{
+if(staffListData.length <= 1){ alert("担当者は最低1人必要です"); return; }
+if(!confirm(val + " を削除しますか？")) return;
+staffListData.splice(idx,1);
+saveList("torihiki_staffList", staffListData);
+renderStaffManageList();
+renderSelectOptions(staff, staffListData, true);
+updatePaper();
+});
+}
+
+function renderTemplateManageList(){
+renderManageList("templateList", templateListData, (idx, val)=>{
+if(templateListData.length <= 1){ alert("テンプレートは最低1つ必要です"); return; }
+if(!confirm(val + " を削除しますか？")) return;
+templateListData.splice(idx,1);
+saveList("torihiki_templateList", templateListData);
+renderTemplateManageList();
+renderSelectOptions(template, templateListData, true);
+updatePaper();
+});
+}
+
+document.getElementById("addStaffBtn").onclick = ()=>{
+const input = document.getElementById("newStaffName");
+const v = input.value.trim();
+if(!v) return;
+if(staffListData.includes(v)){ alert("すでに登録されています"); return; }
+staffListData.push(v);
+saveList("torihiki_staffList", staffListData);
+input.value = "";
+renderStaffManageList();
+renderSelectOptions(staff, staffListData, true);
+};
+
+document.getElementById("addTemplateBtn").onclick = ()=>{
+const input = document.getElementById("newTemplateName");
+const v = input.value.trim();
+if(!v) return;
+if(templateListData.includes(v)){ alert("すでに登録されています"); return; }
+templateListData.push(v);
+saveList("torihiki_templateList", templateListData);
+input.value = "";
+renderTemplateManageList();
+renderSelectOptions(template, templateListData, true);
+};
+
+["newStaffName","newTemplateName"].forEach(id=>{
+document.getElementById(id).addEventListener("keydown", (e)=>{
+if(e.key === "Enter"){
+e.preventDefault();
+document.getElementById(id === "newStaffName" ? "addStaffBtn" : "addTemplateBtn").click();
+}
+});
+});
+
+/* ===== 画面遷移(メイン ⇔ 設定) ===== */
+function showSettings(){
+document.getElementById("mainScreen").classList.add("hidden");
+document.getElementById("settingsScreen").classList.remove("hidden");
+document.getElementById("backBtn").style.visibility = "visible";
+document.getElementById("settingsBtn").style.visibility = "hidden";
+renderStaffManageList();
+renderTemplateManageList();
+window.scrollTo(0,0);
+}
+function showMain(){
+document.getElementById("settingsScreen").classList.add("hidden");
+document.getElementById("mainScreen").classList.remove("hidden");
+document.getElementById("backBtn").style.visibility = "hidden";
+document.getElementById("settingsBtn").style.visibility = "visible";
+window.scrollTo(0,0);
+}
+document.getElementById("settingsBtn").onclick = showSettings;
+document.getElementById("backBtn").onclick = showMain;
+
+renderSelectOptions(staff, staffListData);
+renderSelectOptions(template, templateListData);
 
 const ids = [
 "receiptNo","tradeDate","template","staff","name",
 "birthday","address","docType","docNo","memo"
 ];
-
 function todayStr(){
-  const d = new Date();
-  return d.toISOString().slice(0,10);
+const d = new Date();
+return d.toISOString().slice(0,10);
 }
-
 function makeReceiptNo(){
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
-  const n = String(Math.floor(Math.random()*900)+100);
-  return y + m + day + "-" + n;
+const d = new Date();
+const y = d.getFullYear();
+const m = String(d.getMonth()+1).padStart(2,"0");
+const day = String(d.getDate()).padStart(2,"0");
+const n = String(Math.floor(Math.random()*900)+100);
+return y + m + day + "-" + n;
 }
-
 tradeDate.value = todayStr();
 receiptNo.value = makeReceiptNo();
-
 ids.forEach(id=>{
-  document.getElementById(id).addEventListener("input", updatePaper);
+document.getElementById(id).addEventListener("input", updatePaper);
 });
-
 function updatePaper(){
-  pReceipt.textContent = receiptNo.value;
-  pDate.textContent = tradeDate.value;
-  pTemplate.textContent = template.value;
-  pName.textContent = name.value;
-  pAddress.textContent = address.value;
-  pBirthday.textContent = birthday.value;
-  pDocType.textContent = docType.value;
-  pDocNo.textContent = docNo.value;
-  pStaff.textContent = staff.value;
-  pMemo.textContent = memo.value;
+pReceipt.textContent = receiptNo.value;
+pDate.textContent = tradeDate.value;
+pTemplate.textContent = template.value;
+pName.textContent = name.value;
+pAddress.textContent = address.value;
+pBirthday.textContent = birthday.value;
+pDocType.textContent = docType.value;
+pDocNo.textContent = docNo.value;
+pStaff.textContent = staff.value;
+pMemo.textContent = memo.value;
 }
 updatePaper();
-
 function cropWhiteSpace(sourceCanvas){
-  const ctx = sourceCanvas.getContext("2d");
-  const w = sourceCanvas.width;
-  const h = sourceCanvas.height;
-  const data = ctx.getImageData(0,0,w,h).data;
-
-  let top = h, left = w, right = 0, bottom = 0;
-  const threshold = 245;
-
-  for(let y=0; y<h; y++){
-    for(let x=0; x<w; x++){
-      const i = (y*w+x)*4;
-      const r = data[i];
-      const g = data[i+1];
-      const b = data[i+2];
-      const a = data[i+3];
-
-      if(a > 20 && !(r > threshold && g > threshold && b > threshold)){
-        if(x < left) left = x;
-        if(x > right) right = x;
-        if(y < top) top = y;
-        if(y > bottom) bottom = y;
-      }
-    }
-  }
-
-  if(right <= left || bottom <= top){
-    return sourceCanvas.toDataURL("image/png");
-  }
-
-  const padding = 25;
-  left = Math.max(0, left - padding);
-  top = Math.max(0, top - padding);
-  right = Math.min(w, right + padding);
-  bottom = Math.min(h, bottom + padding);
-
-  const cropW = right - left;
-  const cropH = bottom - top;
-
-  const newCanvas = document.createElement("canvas");
-  newCanvas.width = cropW;
-  newCanvas.height = cropH;
-  const newCtx = newCanvas.getContext("2d");
-
-  newCtx.drawImage(
-    sourceCanvas,
-    left, top, cropW, cropH,
-    0, 0, cropW, cropH
-  );
-
-  return newCanvas.toDataURL("image/png");
+const ctx = sourceCanvas.getContext("2d");
+const w = sourceCanvas.width;
+const h = sourceCanvas.height;
+const data = ctx.getImageData(0,0,w,h).data;
+let top = h, left = w, right = 0, bottom = 0;
+const threshold = 245;
+for(let y=0; y<h; y++){
+for(let x=0; x<w; x++){
+const i = (y*w+x)*4;
+const r = data[i];
+const g = data[i+1];
+const b = data[i+2];
+const a = data[i+3];
+if(a > 20 && !(r > threshold && g > threshold && b > threshold)){
+if(x < left) left = x;
+if(x > right) right = x;
+if(y < top) top = y;
+if(y > bottom) bottom = y;
 }
-
+}
+}
+if(right <= left || bottom <= top){
+return sourceCanvas.toDataURL("image/png");
+}
+const padding = 25;
+left = Math.max(0, left - padding);
+top = Math.max(0, top - padding);
+right = Math.min(w, right + padding);
+bottom = Math.min(h, bottom + padding);
+const cropW = right - left;
+const cropH = bottom - top;
+const newCanvas = document.createElement("canvas");
+newCanvas.width = cropW;
+newCanvas.height = cropH;
+const newCtx = newCanvas.getContext("2d");
+newCtx.drawImage(
+sourceCanvas,
+left, top, cropW, cropH,
+0, 0, cropW, cropH
+);
+return newCanvas.toDataURL("image/png");
+}
 function imageFileToCroppedDataURL(file){
-  return new Promise((resolve)=>{
-    const img = new Image();
-    img.onload = function(){
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img,0,0);
-      resolve(cropWhiteSpace(canvas));
-    };
-    img.src = URL.createObjectURL(file);
-  });
+return new Promise((resolve)=>{
+const img = new Image();
+img.onload = function(){
+const canvas = document.createElement("canvas");
+canvas.width = img.width;
+canvas.height = img.height;
+const ctx = canvas.getContext("2d");
+ctx.drawImage(img,0,0);
+resolve(cropWhiteSpace(canvas));
+};
+img.src = URL.createObjectURL(file);
+});
+}
+fileInput.addEventListener("change", async function(e){
+const file = e.target.files[0];
+if(!file) return;
+preview.alt = "読み込み中…";
+if(file.type.startsWith("image/")){
+const cropped = await imageFileToCroppedDataURL(file);
+preview.src = cropped;
+pPreview.src = cropped;
+ocrImageData = cropped;
+return;
+}
+if(file.type === "application/pdf"){
+const buffer = await file.arrayBuffer();
+const pdf = await pdfjsLib.getDocument({data:buffer}).promise;
+const page = await pdf.getPage(1);
+const viewport = page.getViewport({scale:3});
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = viewport.width;
+canvas.height = viewport.height;
+await page.render({
+canvasContext:ctx,
+viewport:viewport
+}).promise;
+const cropped = cropWhiteSpace(canvas);
+preview.src = cropped;
+pPreview.src = cropped;
+ocrImageData = cropped;
+}
+});
+/* 免許証は地紋・ホログラム・小さい文字が多く、原寸のままだと文字化けしやすいので、
+   拡大 + グレースケール化 + コントラスト強調をしてからOCRにかける */
+function preprocessForOCR(dataUrl){
+return new Promise((resolve)=>{
+const img = new Image();
+img.onload = function(){
+const scale = 2.2;
+const canvas = document.createElement("canvas");
+canvas.width = Math.round(img.width * scale);
+canvas.height = Math.round(img.height * scale);
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = "high";
+ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+const d = imgData.data;
+for(let i=0; i<d.length; i+=4){
+const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+let v = (gray - 128) * 1.55 + 128;
+v = Math.max(0, Math.min(255, v));
+d[i] = d[i+1] = d[i+2] = v;
+}
+ctx.putImageData(imgData, 0, 0);
+resolve(canvas.toDataURL("image/png"));
+};
+img.src = dataUrl;
+});
 }
 
-fileInput.addEventListener("change", async function(e){
-  const file = e.target.files[0];
-  if(!file) return;
+function pad2(n){ return String(n).padStart(2,"0"); }
 
-  preview.alt = "読み込み中…";
+function eraToISO(era, y, m, d){
+let year;
+if(era === "昭和") year = 1925 + y;
+else if(era === "平成") year = 1988 + y;
+else if(era === "令和") year = 2018 + y;
+else return null;
+return year + "-" + pad2(m) + "-" + pad2(d);
+}
 
-  if(file.type.startsWith("image/")){
-    const cropped = await imageFileToCroppedDataURL(file);
-    preview.src = cropped;
-    pPreview.src = cropped;
-    ocrImageData = cropped;
-    return;
-  }
+/* OCRで読み取った生テキストから、氏名・住所・生年月日・書類番号らしき部分を抜き出す */
+function extractFieldsFromOcr(text){
+const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+const joined = text.replace(/[ \t]+/g,"");
+const out = {};
 
-  if(file.type === "application/pdf"){
-    const buffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data:buffer}).promise;
-    const page = await pdf.getPage(1);
-    const viewport = page.getViewport({scale:3});
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+const numMatch = joined.match(/\d{12}/);
+if(numMatch) out.docNo = numMatch[0];
 
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+const eraMatch = joined.match(/(昭和|平成|令和)(\d{1,2})年(\d{1,2})月(\d{1,2})日/);
+if(eraMatch){
+const iso = eraToISO(eraMatch[1], parseInt(eraMatch[2],10), parseInt(eraMatch[3],10), parseInt(eraMatch[4],10));
+if(iso) out.birthday = iso;
+}else{
+const westernMatch = joined.match(/(19\d{2}|20\d{2})年(\d{1,2})月(\d{1,2})日/);
+if(westernMatch) out.birthday = westernMatch[1] + "-" + pad2(westernMatch[2]) + "-" + pad2(westernMatch[3]);
+}
 
-    await page.render({
-      canvasContext:ctx,
-      viewport:viewport
-    }).promise;
+const addrMatch = text.match(/(北海道|東京都|大阪府|京都府|.{2,3}県)[^\n]{0,40}/);
+if(addrMatch) out.address = addrMatch[0].replace(/\s+/g,"").trim();
 
-    const cropped = cropWhiteSpace(canvas);
-    preview.src = cropped;
-    pPreview.src = cropped;
-    ocrImageData = cropped;
-  }
-});
+const nameCandidate = lines.find(l =>
+/^[一-龠ぁ-んァ-ヶー\s　]{2,20}$/.test(l) &&
+!/(免許|証明|第|種類|生年|住所|交付|有効|殿|様|氏名)/.test(l)
+);
+if(nameCandidate) out.name = nameCandidate.replace(/[\s　]+/g," ").trim();
+
+return out;
+}
+
+function syncOcrFieldsToForm(fields){
+const filled = [];
+if(fields.name && !name.value){ name.value = fields.name; filled.push("氏名"); }
+if(fields.address && !address.value){ address.value = fields.address; filled.push("住所"); }
+if(fields.birthday && !birthday.value){ birthday.value = fields.birthday; filled.push("生年月日"); }
+if(fields.docNo && !docNo.value){ docNo.value = fields.docNo; filled.push("本人確認書類番号"); }
+updatePaper();
+const note = document.getElementById("syncedNote");
+if(filled.length){
+note.textContent = "反映しました: " + filled.join("・") + "(内容が違う場合は上のフォームで直接修正してください)";
+}else{
+note.textContent = "住所・氏名・生年月日・番号を自動検出できませんでした。手入力してください。";
+}
+}
 
 async function runOCR(){
-  if(!ocrImageData){
-    alert("先に本人確認書類をアップロードしてください");
-    return;
-  }
-
-  ocrText.value = "読み取り中です。少し待ってください…";
-
-  try{
-    const result = await Tesseract.recognize(
-      ocrImageData,
-      "jpn+eng",
-      {
-        logger: m => {
-          if(m.status === "recognizing text"){
-            const p = Math.round(m.progress * 100);
-            ocrText.value = "OCR読み取り中… " + p + "%";
-          }
-        }
-      }
-    );
-
-    ocrText.value = result.data.text || "文字を読み取れませんでした。画像を明るく、まっすぐ撮って再試行してください。";
-
-  }catch(err){
-    ocrText.value = "OCRでエラーが出ました。画像で再アップロードして試してください。";
-    console.error(err);
-  }
+if(!ocrImageData){
+alert("先に本人確認書類をアップロードしてください");
+return;
 }
-
+ocrText.value = "画像を補正しています…";
+document.getElementById("syncedNote").textContent = "";
+try{
+const ocrSource = await preprocessForOCR(ocrImageData);
+ocrText.value = "読み取り中です。少し待ってください…";
+const result = await Tesseract.recognize(
+ocrSource,
+"jpn+eng",
+{
+logger: m => {
+if(m.status === "recognizing text"){
+const p = Math.round(m.progress * 100);
+ocrText.value = "OCR読み取り中… " + p + "%";
+}
+}
+}
+);
+const text = result.data.text || "";
+if(text.trim()){
+ocrText.value = text;
+const fields = extractFieldsFromOcr(text);
+syncOcrFieldsToForm(fields);
+}else{
+ocrText.value = "文字を読み取れませんでした。画像を明るく、まっすぐ・大きめに撮って再試行してください。";
+}
+}catch(err){
+ocrText.value = "OCRでエラーが出ました。画像で再アップロードして試してください。";
+console.error(err);
+}
+}
 async function makePDF(){
-  updatePaper();
-
-  if(!name.value){
-    alert("氏名を入力してください");
-    return;
-  }
-
-  const { jsPDF } = window.jspdf;
-  const paperEl = document.getElementById("paper");
-
-  const canvas = await html2canvas(paperEl, {
-    scale:2,
-    useCORS:true
-  });
-
-  const imgData = canvas.toDataURL("image/png");
-  const pdf = new jsPDF("p","mm","a4");
-
-  pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
-  pdf.save("取引確認書_" + receiptNo.value + ".pdf");
+updatePaper();
+if(!name.value){
+alert("氏名を入力してください");
+return;
 }
-
+const { jsPDF } = window.jspdf;
+const paperEl = document.getElementById("paper");
+const canvas = await html2canvas(paperEl, {
+scale:2,
+useCORS:true
+});
+const imgData = canvas.toDataURL("image/png");
+const pdf = new jsPDF("p","mm","a4");
+pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
+pdf.save("取引確認書_" + receiptNo.value + ".pdf");
+}
 function clearForm(){
-  if(!confirm("入力内容をクリアしますか？")) return;
-
-  name.value = "";
-  birthday.value = "";
-  address.value = "";
-  docNo.value = "";
-  memo.value = "";
-  ocrText.value = "";
-  preview.removeAttribute("src");
-  pPreview.removeAttribute("src");
-  ocrImageData = "";
-  receiptNo.value = makeReceiptNo();
-  tradeDate.value = todayStr();
-  updatePaper();
+if(!confirm("入力内容をクリアしますか？")) return;
+name.value = "";
+birthday.value = "";
+address.value = "";
+docNo.value = "";
+memo.value = "";
+ocrText.value = "";
+document.getElementById("syncedNote").textContent = "";
+preview.removeAttribute("src");
+pPreview.removeAttribute("src");
+ocrImageData = "";
+receiptNo.value = makeReceiptNo();
+tradeDate.value = todayStr();
+updatePaper();
 }
 </script>
-
 </body>
 </html>
