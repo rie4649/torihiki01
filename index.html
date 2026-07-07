@@ -1,279 +1,425 @@
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>取引確認書</title>
+<title>関根ストア</title>
 <link rel="icon" type="image/png" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#111111">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<meta name="theme-color" content="#FFFFFF">
+
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<!-- ==== Firebase (みんなでデータを共有するための仕組み) ==== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- ==== QRコード生成ライブラリ ==== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
-body{margin:0;font-family:Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:#eef1f5;color:#222}
-.wrap{max-width:1100px;margin:20px auto;padding:15px}
-.card{background:white;border-radius:16px;padding:22px;box-shadow:0 6px 20px rgba(0,0,0,.12);margin-bottom:20px}
-h1{text-align:center;margin:10px 0 20px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-label{font-weight:bold;display:block;margin-bottom:5px}
-input,select,textarea{width:100%;padding:11px;font-size:16px;box-sizing:border-box;border:1px solid #bbb;border-radius:8px}
-textarea{min-height:90px}
-.full{grid-column:1 / -1}
-.btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px}
-button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10px;cursor:pointer}
-.blue{background:#0b63ce;color:white}
-.dark{background:#111;color:white}
-.gray{background:#ddd;color:#111}
-.previewBox{border:2px dashed #999;border-radius:12px;padding:12px;background:#fafafa;text-align:center}
-.ocrBox{background:#fff8df;border:2px solid #e3c45f;border-radius:12px;padding:12px;margin-top:12px}
-.ocrBox .synced{font-size:13px;color:#0b63ce;font-weight:bold;margin-top:6px}
-/* 運転免許証・マイナンバーカード等はISO/IEC 7810 ID-1規格(85.6mm×54mm)なので、
-   その比率の枠に収めて表示する */
-.idcard-frame{
-width:100%;
-max-width:340px;
-aspect-ratio:85.6/54;
-margin:10px auto 0;
-border:1px solid #333;
-border-radius:10px;
-background:#fff repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 10px,#fff 10px,#fff 20px);
-display:flex;align-items:center;justify-content:center;
-overflow:hidden;
-}
-.idcard-frame img{width:100%;height:100%;object-fit:contain;background:#fff}
-.idcard-label{font-size:12px;color:#888;margin-top:6px}
-.paper{width:794px;min-height:1123px;background:white;margin:20px auto;padding:50px;box-sizing:border-box;border:1px solid #ccc}
-.paper h1{letter-spacing:8px;border-bottom:3px double #111;padding-bottom:12px}
-.info{display:grid;grid-template-columns:180px 1fr;border-top:1px solid #333;border-left:1px solid #333;margin-top:25px}
-.info div{padding:11px;border-right:1px solid #333;border-bottom:1px solid #333;min-height:24px}
-.head{background:#f0f0f0;font-weight:bold}
-.docTitle{margin-top:28px;font-size:20px;font-weight:bold;border-bottom:2px solid #111;padding-bottom:6px}
-.docImg{margin-top:15px;padding:14px;border:1px solid #333;background:#fff}
-.small{font-size:13px;color:#666;line-height:1.7}
-@media(max-width:850px){
-.grid{grid-template-columns:1fr}
-.btns{grid-template-columns:1fr}
-.paper{width:100%;min-height:auto;padding:25px}
-}
-@media print{
-.inputCard{display:none}
-body{background:white}
-.wrap{margin:0;padding:0}
-.card{box-shadow:none;margin:0;padding:0}
-.paper{border:none;margin:0;width:100%}
-.appbar{display:none}
-}
+  :root{
+    --bg: #F5F5F7;
+    --card: #FFFFFF;
+    --ink: #1D1D1F;
+    --ink-dim: #6E6E73;
+    --navy: #14264A;
+    --blue: #0071E3;
+    --gold: #FFB800;
+    --danger: #E0483E;
+    --border: #E5E5E7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(122,76,255,0.10), transparent 40%),
+      radial-gradient(circle at 95% 10%, rgba(255,95,162,0.12), transparent 40%),
+      radial-gradient(circle at 50% 40%, rgba(62,107,255,0.08), transparent 50%),
+      var(--bg);
+    color: var(--ink);
+    min-height:100vh;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 24px 40px}
+  a{color:inherit}
 
-.appbar-right{display:flex;align-items:center;gap:4px}
-.install-btn{background:#0b63ce !important}
-.install-btn:hover{background:#0b63ce;filter:brightness(1.15)}
+  /* ===== アプリバー ===== */
+  .appbar{
+    position:sticky;top:0;z-index:100;
+    background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    color:var(--ink);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 24px;
+  }
+  .appbar-title{font-weight:900;font-size:18px;letter-spacing:0.02em}
+  .appbar-btn{
+    background:none;border:none;color:var(--blue);font-size:14px;font-weight:700;
+    padding:8px 10px;cursor:pointer;border-radius:8px;
+  }
+  .appbar-btn:hover{background:rgba(0,113,227,.08)}
 
-.overlay{
-position:fixed;inset:0;background:rgba(0,0,0,.5);
-display:flex;align-items:center;justify-content:center;
-z-index:200;padding:20px;
-}
-.overlay.hidden{display:none}
-.overlay-card{
-background:#fff;border-radius:14px;padding:22px;
-width:100%;max-width:360px;
-}
-.overlay-card h3{margin:0 0 10px}
+  .screen.hidden{display:none}
 
-/* ===== アプリバー(戻る／設定) ===== */
-.appbar{
-position:sticky;top:0;z-index:100;
-background:#111;color:#fff;
-display:flex;align-items:center;justify-content:space-between;
-padding:12px 16px;
-}
-.appbar-title{font-weight:bold;font-size:16px;letter-spacing:2px}
-.appbar-btn{
-background:none;border:none;color:#fff;
-font-size:15px;font-weight:bold;padding:8px 10px;
-cursor:pointer;border-radius:8px;
-display:flex;align-items:center;gap:6px;
-width:auto;
-}
-.appbar-btn:hover{background:rgba(255,255,255,.15)}
-.appbar-spacer{width:70px}
+  /* ===== ヒーロー ===== */
+  .hero{padding:36px 0 8px}
+  .hero-top{display:flex;align-items:center;gap:14px}
+  .hero-logo{
+    width:56px;height:56px;border-radius:14px;object-fit:cover;flex:0 0 auto;
+    box-shadow:0 8px 18px rgba(20,38,74,0.18);
+  }
+  .hero-title{
+    font-size: clamp(38px, 8vw, 64px);
+    font-weight:900;letter-spacing:-0.02em;line-height:1.1;
+    background: linear-gradient(90deg, var(--navy), var(--blue));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .hero-sparkle{
+    -webkit-text-fill-color:initial;color:initial;font-size:0.5em;
+    display:inline-block;animation:sparkle-bounce 2.2s ease-in-out infinite;
+  }
+  @keyframes sparkle-bounce{
+    0%,100%{ transform:translateY(0) rotate(0deg); }
+    50%{ transform:translateY(-8px) rotate(14deg); }
+  }
+  .hero-sub{
+    display:inline-block;margin-top:14px;
+    background:linear-gradient(90deg, #3E6BFF, #7A4CFF);
+    color:#fff;font-weight:800;font-size:13px;letter-spacing:0.04em;
+    padding:7px 16px;border-radius:999px;
+  }
 
-/* ===== 画面切り替え ===== */
-.screen.hidden{display:none}
+  /* ===== 検索 ===== */
+  .search-slot{
+    margin:22px 0 30px;background:#E9E9EB;border-radius:12px;
+    padding:12px 16px;display:flex;align-items:center;gap:10px;
+  }
+  .search-slot input{
+    border:none;background:none;outline:none;font-family:'Zen Kaku Gothic New',sans-serif;
+    font-size:16px;color:var(--ink);width:100%;
+  }
 
-/* ===== 設定画面 ===== */
-.manageList{display:flex;flex-direction:column;gap:8px;margin:10px 0 18px}
-.manageRow{
-display:flex;align-items:center;justify-content:space-between;
-background:#f5f5f7;border-radius:8px;padding:10px 14px;
-}
-.manageRow span{font-size:15px}
-.manageRow button{
-width:auto;padding:7px 14px;font-size:13px;
-background:#e4463c;color:#fff;border-radius:6px;
-}
-.addRow{display:flex;gap:8px}
-.addRow input{flex:1}
-.addRow button{width:auto;padding:11px 20px}
-.settingsSection h3{margin:6px 0 8px;font-size:16px}
-.emptyNote{color:#888;font-size:13px;margin:4px 0 10px}
-hr.sep{border:none;border-top:1px solid #ddd;margin:22px 0}
+  /* ===== 新着ヒーローバナー ===== */
+  .featured{
+    border-radius:24px;padding:32px;margin-bottom:44px;position:relative;overflow:hidden;
+    background: linear-gradient(135deg, #3E6BFF 0%, #7A4CFF 55%, #FF5FA2 100%);
+    color:#fff;cursor:pointer;border:none;text-align:left;width:100%;font-family:inherit;
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .featured:hover{transform:translateY(-3px) scale(1.005);box-shadow:0 16px 30px rgba(122,76,255,0.35)}
+  .featured::after{
+    content:"";position:absolute;inset:0;
+    background: radial-gradient(circle at 85% 15%, rgba(255,255,255,0.25), transparent 55%);
+  }
+  .featured-eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.18em;
+    opacity:0.9;position:relative;z-index:1;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .featured-eyebrow::before{
+    content:"";width:7px;height:7px;border-radius:50%;background:#fff;
+    animation:pulse-dot 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-dot{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:0.4; transform:scale(1.4); }
+  }
+  .featured-body{display:flex;align-items:center;gap:20px;margin-top:14px;position:relative;z-index:1}
+  .featured-icon{
+    width:72px;height:72px;border-radius:18px;background:#fff;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden;
+    box-shadow:0 10px 24px rgba(0,0,0,0.25);
+  }
+  .featured-icon img{width:100%;height:100%;object-fit:cover}
+  .featured-name{font-size:24px;font-weight:900}
+  .featured-desc{font-size:14px;opacity:0.92;margin-top:4px;max-width:46ch}
+  .featured-btn{
+    margin-top:16px;display:inline-flex;align-items:center;gap:6px;
+    background:#fff;color:var(--navy);font-weight:800;font-size:14px;
+    padding:10px 20px;border-radius:999px;position:relative;z-index:1;
+  }
+
+  /* ===== アプリ一覧(App Store風の行) ===== */
+  .section-title{font-size:22px;font-weight:900;margin-bottom:14px}
+  .app-list{display:flex;flex-direction:column}
+  .app-row{
+    display:flex;align-items:center;gap:16px;padding:14px 4px;
+    background:none;border:none;border-bottom:1px solid var(--border);
+    cursor:pointer;text-align:left;width:100%;font-family:inherit;color:var(--ink);
+  }
+  .app-row:last-child{border-bottom:none}
+  .app-icon{
+    width:56px;height:56px;border-radius:14px;flex:0 0 auto;overflow:hidden;
+    background:var(--card);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;font-size:26px;
+  }
+  .app-icon img{width:100%;height:100%;object-fit:cover}
+  .app-info{flex:1;min-width:0}
+  .app-name{font-size:16px;font-weight:800}
+  .app-stars{font-size:11.5px;color:var(--ink-dim);margin-top:2px}
+  .app-desc{font-size:13px;color:var(--ink-dim);margin-top:3px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60ch}
+  .open-pill{
+    flex:0 0 auto;background:#E9E9EB;color:var(--blue);font-weight:800;font-size:13.5px;
+    padding:8px 20px;border-radius:999px;white-space:nowrap;
+  }
+  .app-row:hover .open-pill{background:var(--blue);color:#fff}
+
+  .empty-state{
+    text-align:center;color:var(--ink-dim);padding:60px 20px;font-size:14px;
+    border:1px dashed var(--border);border-radius:16px;
+  }
+
+  footer{color:var(--ink-dim);font-size:12px;line-height:1.9;margin-top:30px}
+
+  /* ===== 詳細画面 ===== */
+  .detail-head{display:flex;gap:20px;align-items:flex-start;margin:28px 0 20px;flex-wrap:wrap}
+  .detail-icon{
+    width:96px;height:96px;border-radius:22px;background:var(--card);display:flex;align-items:center;
+    justify-content:center;font-size:48px;overflow:hidden;flex:0 0 auto;
+    border:1px solid var(--border);
+  }
+  .detail-icon img{width:100%;height:100%;object-fit:cover}
+  .detail-name{font-size:26px;font-weight:900;margin-bottom:10px}
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;border:none;border-radius:999px;
+    font-family:'Zen Kaku Gothic New',sans-serif;font-weight:800;font-size:14px;
+    padding:12px 22px;cursor:pointer;
+  }
+  .btn-primary{background:var(--blue);color:#fff}
+  .btn-primary:hover{background:#0060c2}
+  .btn-secondary{background:#E9E9EB;color:var(--ink)}
+  .btn-danger{background:var(--danger);color:#fff}
+
+  .panel{
+    background:var(--card);color:var(--ink);border-radius:18px;padding:22px;margin-bottom:20px;
+    border:1px solid var(--border);
+  }
+  .panel h3{font-size:15px;margin-bottom:10px;font-weight:900}
+  .panel p{font-size:14.5px;line-height:1.8;color:var(--ink-dim)}
+
+  .qr-row{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+  .qr-box{background:#fff;padding:10px;border-radius:12px;display:inline-block;flex:0 0 auto;border:1px solid var(--border)}
+  .qr-note{font-size:13px;color:var(--ink-dim);line-height:1.8;max-width:38ch}
+
+  .rating-summary{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .rating-big{font-size:34px;font-weight:900;color:var(--ink)}
+  .rating-stars{color:var(--gold);font-size:17px;letter-spacing:2px}
+  .rating-count{font-size:12.5px;color:var(--ink-dim)}
+
+  .review-form{display:flex;flex-direction:column;gap:12px;margin-bottom:20px;background:var(--bg);border-radius:14px;padding:16px}
+  .review-form input, .review-form textarea{
+    border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;
+    font-family:'Zen Kaku Gothic New',sans-serif;background:#fff;color:var(--ink);
+  }
+  .review-form textarea{min-height:70px;resize:vertical}
+  .star-picker-label{font-size:12.5px;font-weight:700;color:var(--ink-dim)}
+  .star-picker{display:flex;gap:6px;font-size:30px;cursor:pointer;line-height:1}
+  .star-picker span{color:#D6D6DA;transition:transform .1s, color .1s}
+  .star-picker span.active{color:var(--gold)}
+  .star-picker span:hover{transform:scale(1.15)}
+
+  .review-item{border-top:1px solid var(--border);padding:14px 0}
+  .review-item:first-child{border-top:none;padding-top:0}
+  .review-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .review-author{font-weight:800;font-size:14px}
+  .review-stars{color:var(--gold);font-size:13px}
+  .review-date{font-size:11.5px;color:var(--ink-dim)}
+  .review-comment{font-size:14px;line-height:1.7;color:var(--ink)}
+  .no-reviews{font-size:13.5px;color:var(--ink-dim)}
+
+  .install-note{
+    display:flex;gap:10px;align-items:flex-start;background:#EAF2FF;border:1px solid #CFE1FF;
+    border-radius:12px;padding:12px 14px;font-size:12.5px;color:#0A3D82;line-height:1.7;margin-top:14px;
+  }
+
+  /* ===== 設定画面 ===== */
+  .manage-row{
+    display:flex;align-items:center;gap:14px;background:var(--card);color:var(--ink);
+    border-radius:14px;padding:14px 16px;margin-bottom:10px;border:1px solid var(--border);
+  }
+  .manage-row .app-icon{width:44px;height:44px;font-size:20px}
+  .manage-row .info{flex:1;min-width:0}
+  .manage-row .info b{display:block;font-size:14.5px}
+  .manage-row .info span{font-size:12px;color:var(--ink-dim)}
+  .manage-actions{display:flex;gap:8px}
+  .reorder-btns{display:flex;flex-direction:column;gap:2px}
+  .reorder-btn{background:#E9E9EB;color:var(--ink-dim);border:none;border-radius:6px;width:26px;height:22px;font-size:11px;cursor:pointer;padding:0}
+  .reorder-btn:disabled{opacity:0.3;cursor:default}
+  .reorder-btn:not(:disabled):hover{background:var(--blue);color:#fff}
+  .icon-btn-sm{border:none;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:800;cursor:pointer}
+  .form-card{background:var(--card);color:var(--ink);border-radius:18px;padding:22px;margin-top:16px;border:1px solid var(--border)}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+  .form-grid .full{grid-column:1/-1}
+  .form-grid label{display:block;font-size:12.5px;font-weight:700;margin-bottom:4px}
+  .form-grid input, .form-grid textarea{
+    width:100%;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:14px;
+    font-family:'Zen Kaku Gothic New',sans-serif;background:#fff;color:var(--ink);
+  }
+  @media(max-width:640px){ .form-grid{grid-template-columns:1fr} }
+
+  .lock-gate{
+    max-width:360px;margin:60px auto;background:var(--card);color:var(--ink);
+    border-radius:18px;padding:26px;text-align:center;border:1px solid var(--border);
+  }
+  .lock-gate input{
+    width:100%;border:1px solid var(--border);border-radius:10px;padding:11px;margin:14px 0;font-size:15px;
+  }
 </style>
 </head>
 <body>
+
 <div class="appbar">
-<button class="appbar-btn" id="backBtn" style="visibility:hidden">← 戻る</button>
-<div class="appbar-title">取引確認書</div>
-<div class="appbar-right">
-<button class="appbar-btn install-btn" id="installBtn" style="display:none">📲 アプリを追加</button>
-<button class="appbar-btn" id="settingsBtn">⚙ 設定</button>
-</div>
-</div>
-
-<div id="installHelp" class="overlay hidden">
-<div class="overlay-card">
-<h3>アプリとして追加する方法</h3>
-<p id="installHelpText" class="small"></p>
-<button class="gray" id="closeInstallHelp" style="margin-top:14px;width:100%;">閉じる</button>
-</div>
+  <button class="appbar-btn" id="backBtn" style="visibility:hidden">← 戻る</button>
+  <div class="appbar-title">関根ストア</div>
+  <div style="display:flex;align-items:center;gap:6px;">
+    <button class="appbar-btn" id="installBtn" style="display:none;background:var(--blue);color:#fff;border-radius:999px;padding:8px 14px;">📲 アプリを追加</button>
+    <button class="appbar-btn" id="settingsBtn">⚙ 設定</button>
+  </div>
 </div>
 
-<div id="mainScreen" class="screen">
-<div class="wrap">
-<div class="card inputCard">
-<h1>取引確認書 作成画面</h1>
-<div class="grid">
-<div>
-<label>受付番号</label>
-<input id="receiptNo" readonly>
-</div>
-<div>
-<label>取引日</label>
-<input type="date" id="tradeDate">
-</div>
-<div>
-<label>テンプレート</label>
-<select id="template"></select>
-</div>
-<div>
-<label>担当者</label>
-<select id="staff"></select>
-</div>
-<div>
-<label>氏名</label>
-<input id="name" placeholder="例：川村 理絵">
-</div>
-<div>
-<label>生年月日</label>
-<input type="date" id="birthday">
-</div>
-<div class="full">
-<label>住所</label>
-<input id="address" placeholder="住所を入力">
-</div>
-<div>
-<label>確認書類</label>
-<select id="docType">
-<option>運転免許証</option>
-<option>マイナンバーカード</option>
-<option>在留カード</option>
-<option>その他</option>
-</select>
-</div>
-<div>
-<label>本人確認書類番号</label>
-<input id="docNo" placeholder="免許証番号・カード番号など">
-</div>
-<div class="full">
-<label>備考欄</label>
-<textarea id="memo" placeholder="取引内容・査定内容・注意事項など"></textarea>
-</div>
-<div class="full">
-<label>本人確認書類 PDF / 画像アップロード</label>
-<input type="file" id="fileInput" accept="image/*,application/pdf">
-<p class="small">PDFや画像の白い余白をできるだけ自動でカットして表示します。</p>
-<div class="previewBox">
-<div class="idcard-frame">
-<img id="preview" alt="ここに確認書類が表示されます">
-</div>
-<p class="idcard-label">免許証・マイナンバーカードのサイズ比率(85.6mm×54mm)で表示しています</p>
-</div>
-<button class="blue" onclick="runOCR()" style="margin-top:12px;width:100%;">OCRで文字を読み取る</button>
-<div class="ocrBox">
-<label>OCR読み取り結果</label>
-<textarea id="ocrText" placeholder="ここに読み取った文字が表示されます"></textarea>
-<p class="small">氏名・住所・生年月日・番号を自動で読み取り、空欄のフォームに反映します。反映後も内容は手動で修正できます。</p>
-<div class="synced" id="syncedNote"></div>
-</div>
-</div>
-</div>
-<div class="btns">
-<button class="dark" onclick="makePDF()">PDF保存</button>
-<button class="gray" onclick="window.print()">印刷</button>
-<button class="gray" onclick="clearForm()">入力クリア</button>
-</div>
-</div>
-<div class="card">
-<div id="paper" class="paper">
-<h1>取引確認書</h1>
-<div class="info">
-<div class="head">受付番号</div><div id="pReceipt"></div>
-<div class="head">取引日</div><div id="pDate"></div>
-<div class="head">テンプレート</div><div id="pTemplate"></div>
-<div class="head">氏名</div><div id="pName"></div>
-<div class="head">住所</div><div id="pAddress"></div>
-<div class="head">生年月日</div><div id="pBirthday"></div>
-<div class="head">確認書類</div><div id="pDocType"></div>
-<div class="head">本人確認書類番号</div><div id="pDocNo"></div>
-<div class="head">担当者</div><div id="pStaff"></div>
-<div class="head">備考</div><div id="pMemo"></div>
-</div>
-<div class="docTitle">本人確認書類</div>
-<div class="docImg">
-<div class="idcard-frame">
-<img id="pPreview">
-</div>
-</div>
-<p class="small">上記内容に基づき、本人確認および取引確認を行いました。</p>
-</div>
-</div>
-</div>
+<div id="installHelp" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:340px;width:100%;text-align:left;">
+    <h3 style="margin:0 0 10px;color:var(--navy);">アプリとして追加する方法</h3>
+    <p id="installHelpText" style="font-size:13px;color:#555;line-height:1.7;"></p>
+    <button id="closeInstallHelp" style="margin-top:14px;width:100%;padding:10px;border:none;border-radius:8px;background:#E9E9EB;font-weight:800;cursor:pointer;font-size:14px;">閉じる</button>
+  </div>
 </div>
 
+<!-- ============ ① ストア画面(一覧) ============ -->
+<div id="storeScreen" class="screen">
+  <div class="wrap">
+    <div class="hero">
+      <div class="hero-top">
+        <img src="logo.png" alt="関根ストア" class="hero-logo">
+        <div class="hero-title">関根ストア<span class="hero-sparkle">✨</span></div>
+      </div>
+      <p class="hero-sub">新作アプリ情報</p>
+    </div>
+
+    <div class="search-slot">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8a8e" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="アプリ名や機能で検索…">
+    </div>
+
+    <div id="featuredWrap"></div>
+
+    <div class="section-title">すべてのアプリ</div>
+    <div id="loadStatus" style="color:var(--ink-dim);font-size:13px;margin-bottom:10px;">読み込み中…</div>
+    <div class="app-list" id="grid"></div>
+  </div>
+  <div class="wrap"><footer>レビューや設定はチーム全員で共有されます。反映まで数秒かかることがあります。</footer></div>
+</div>
+
+<!-- ============ ② アプリ詳細画面 ============ -->
+<div id="detailScreen" class="screen hidden">
+  <div class="wrap">
+    <div class="detail-head">
+      <div class="detail-icon" id="detailIcon"></div>
+      <div>
+        <div class="detail-name" id="detailName"></div>
+        <button class="btn btn-primary" id="detailOpenBtn">このアプリを開く →</button>
+        <div class="install-note">📲 開いた先のページで、対応ブラウザなら自動でインストールの確認が表示されます。表示された「インストール」を押すとデスクトップ(またはホーム画面)に追加されます。Safariなど一部のブラウザは、ブラウザの仕様上、必ず手動での追加(共有ボタン→ホーム画面に追加)になります。</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>紹介</h3>
+      <p id="detailDesc"></p>
+    </div>
+
+    <div class="panel">
+      <h3>スマホで開く(QRコード)</h3>
+      <div class="qr-row">
+        <div class="qr-box" id="qrcode"></div>
+        <p class="qr-note">スマホのカメラでこのQRコードを読み取ると、このアプリのページが開きます。対応ブラウザなら自動でインストールの確認が出ます。</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>評価とレビュー</h3>
+      <div class="rating-summary">
+        <div class="rating-big" id="ratingBig">–</div>
+        <div>
+          <div class="rating-stars" id="ratingStars"></div>
+          <div class="rating-count" id="ratingCount"></div>
+        </div>
+      </div>
+
+      <div class="review-form">
+        <input type="text" id="reviewAuthor" placeholder="お名前(ニックネーム可)">
+        <div>
+          <div class="star-picker-label">評価(タップして星を選んでください)</div>
+          <div class="star-picker" id="starPicker">
+            <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+          </div>
+        </div>
+        <textarea id="reviewComment" placeholder="使ってみた感想を書いてください"></textarea>
+        <button class="btn btn-primary" id="submitReviewBtn" style="width:fit-content">レビューを投稿</button>
+      </div>
+
+      <div id="reviewList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ③ 設定画面 ============ -->
 <div id="settingsScreen" class="screen hidden">
-<div class="wrap">
-<div class="card">
-<h1>設定</h1>
+  <div class="wrap">
+    <div id="settingsBody">
+      <h1 style="font-size:24px;margin:24px 0 16px">設定 — アプリの管理</h1>
+      <div id="manageList"></div>
 
-<div class="settingsSection">
-<h3>担当者の管理</h3>
-<div id="staffList" class="manageList"></div>
-<div class="addRow">
-<input type="text" id="newStaffName" placeholder="担当者名を入力(例：山田)">
-<button class="blue" id="addStaffBtn">追加</button>
-</div>
-</div>
-
-<hr class="sep">
-
-<div class="settingsSection">
-<h3>テンプレートの管理</h3>
-<div id="templateList" class="manageList"></div>
-<div class="addRow">
-<input type="text" id="newTemplateName" placeholder="テンプレート名を入力">
-<button class="blue" id="addTemplateBtn">追加</button>
-</div>
-</div>
-</div>
-</div>
+      <div class="form-card">
+        <h3 id="formTitle" style="margin-bottom:14px">新しいアプリを追加</h3>
+        <div class="form-grid">
+          <div class="full">
+            <label>アプリ名</label>
+            <input type="text" id="fName">
+          </div>
+          <div class="full">
+            <label>紹介文</label>
+            <textarea id="fDescription" rows="3"></textarea>
+          </div>
+          <div>
+            <label>リンク先URL</label>
+            <input type="text" id="fUrl" placeholder="https://...">
+          </div>
+          <div>
+            <label>アイコン(絵文字1文字、または画像URL)</label>
+            <input type="text" id="fIcon" placeholder="🧩">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" id="saveAppBtn">保存する</button>
+          <button class="btn btn-secondary hidden" id="cancelEditBtn">編集をやめる</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-let ocrImageData = "";
+/* ============================================================
+   ① Firebaseの設定
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyD99Mx0MnGplSQjV7830bS7-gdCBSM9DGY",
+  authDomain: "sekine-store.firebaseapp.com",
+  projectId: "sekine-store",
+  storageBucket: "sekine-store.firebasestorage.app",
+  messagingSenderId: "781856496751",
+  appId: "1:781856496751:web:e2e1e5de4cd803415a819a"
+};
+
+/* 設定画面はパスコードなしで誰でも開けます */
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const appsCol = db.collection("apps");
+const reviewsCol = db.collection("reviews");
 
 /* ===== アプリとして追加(PWAインストール) ===== */
 if("serviceWorker" in navigator){
@@ -286,27 +432,21 @@ let deferredInstallPrompt = null;
 const installBtn = document.getElementById("installBtn");
 let autoPromptTried = false;
 
-/* アプリを開いた瞬間に、自動でインストール確認を出す(対応ブラウザのみ) */
 async function tryAutoPrompt(){
 if(autoPromptTried || !deferredInstallPrompt) return;
 autoPromptTried = true;
 try{
 deferredInstallPrompt.prompt();
 const choice = await deferredInstallPrompt.userChoice;
-if(choice.outcome === "accepted"){
-installBtn.style.display = "none";
-}
+if(choice.outcome === "accepted"){ installBtn.style.display = "none"; }
 deferredInstallPrompt = null;
-}catch(err){
-console.error("auto install prompt failed", err);
-}
+}catch(err){ console.error("auto install prompt failed", err); }
 }
 
 window.addEventListener("beforeinstallprompt", (e)=>{
 e.preventDefault();
 deferredInstallPrompt = e;
 installBtn.style.display = "inline-flex";
-/* ブラウザがこのタイミングで自動表示を許可していれば、すぐに確認ポップアップを出す */
 tryAutoPrompt();
 });
 
@@ -320,15 +460,9 @@ const ua = navigator.userAgent;
 const isMac = /Macintosh/.test(ua);
 const isWin = /Windows/.test(ua);
 const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
-if(isSafari && isMac){
-return "Safariのメニューバーで「ファイル」→「Dockに追加」を選んでください。(Safari 17以降)";
-}
-if(isSafari){
-return "共有ボタン(□に↑のアイコン)をタップし、「ホーム画面に追加」を選んでください。";
-}
-if(isWin || isMac){
-return "アドレスバー右端の「インストール」アイコン(⊕やモニターのマーク)をクリックしてください。表示されない場合は、ブラウザ右上のメニュー(⋮)から「アプリをインストール」を選んでください。";
-}
+if(isSafari && isMac) return "Safariのメニューバーで「ファイル」→「Dockに追加」を選んでください。(Safari 17以降)";
+if(isSafari) return "共有ボタン(□に↑のアイコン)をタップし、「ホーム画面に追加」を選んでください。";
+if(isWin || isMac) return "アドレスバー右端の「インストール」アイコンをクリックしてください。表示されない場合は、ブラウザ右上のメニュー(⋮)から「アプリをインストール」を選んでください。";
 return "ブラウザのメニューから「ホーム画面に追加」または「インストール」を選んでください。";
 }
 
@@ -341,425 +475,411 @@ if(choice.outcome === "accepted") installBtn.style.display = "none";
 return;
 }
 document.getElementById("installHelpText").textContent = detectManualInstallText();
-document.getElementById("installHelp").classList.remove("hidden");
+document.getElementById("installHelp").style.display = "flex";
 });
 
 document.getElementById("closeInstallHelp").onclick = ()=>{
-document.getElementById("installHelp").classList.add("hidden");
+document.getElementById("installHelp").style.display = "none";
 };
 
-/* Chrome/Edge以外(Safariなど)では自動インストールのイベントが飛んでこないため、
-   ボタン自体は常に表示しておき、押した時に自動 or 手動案内のどちらかを行う */
 if(!("onbeforeinstallprompt" in window)){
 installBtn.style.display = "inline-flex";
 }
 
-/* ===== 担当者・テンプレートの管理(設定画面) ===== */
-const DEFAULT_STAFF = ["古川","石原","宮嶋","長村","川村"];
-const DEFAULT_TEMPLATES = ["最新テンプレート","通常取引","本人確認あり","現金取引","貴金属取引","ブランド品取引"];
-
-function loadList(key, def){
-try{
-const raw = localStorage.getItem(key);
-if(raw){
-const arr = JSON.parse(raw);
-if(Array.isArray(arr) && arr.length) return arr;
-}
-}catch(e){}
-return def.slice();
-}
-function saveList(key, arr){
-try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
-}
-
-let staffListData = loadList("torihiki_staffList", DEFAULT_STAFF);
-let templateListData = loadList("torihiki_templateList", DEFAULT_TEMPLATES);
-
-function renderSelectOptions(selectEl, arr, keepValue){
-const prev = keepValue ? selectEl.value : null;
-selectEl.innerHTML = "";
-arr.forEach(v=>{
-const opt = document.createElement("option");
-opt.textContent = v;
-selectEl.appendChild(opt);
-});
-if(prev && arr.includes(prev)) selectEl.value = prev;
-}
-
-function renderManageList(containerId, arr, onDelete){
-const container = document.getElementById(containerId);
-container.innerHTML = "";
-if(arr.length === 0){
-container.innerHTML = '<p class="emptyNote">まだ登録がありません</p>';
-return;
-}
-arr.forEach((val, idx)=>{
-const row = document.createElement("div");
-row.className = "manageRow";
-const span = document.createElement("span");
-span.textContent = val;
-const btn = document.createElement("button");
-btn.textContent = "削除";
-btn.onclick = ()=> onDelete(idx, val);
-row.appendChild(span);
-row.appendChild(btn);
-container.appendChild(row);
-});
-}
-
-function renderStaffManageList(){
-renderManageList("staffList", staffListData, (idx, val)=>{
-if(staffListData.length <= 1){ alert("担当者は最低1人必要です"); return; }
-if(!confirm(val + " を削除しますか？")) return;
-staffListData.splice(idx,1);
-saveList("torihiki_staffList", staffListData);
-renderStaffManageList();
-renderSelectOptions(staff, staffListData, true);
-updatePaper();
-});
-}
-
-function renderTemplateManageList(){
-renderManageList("templateList", templateListData, (idx, val)=>{
-if(templateListData.length <= 1){ alert("テンプレートは最低1つ必要です"); return; }
-if(!confirm(val + " を削除しますか？")) return;
-templateListData.splice(idx,1);
-saveList("torihiki_templateList", templateListData);
-renderTemplateManageList();
-renderSelectOptions(template, templateListData, true);
-updatePaper();
-});
-}
-
-document.getElementById("addStaffBtn").onclick = ()=>{
-const input = document.getElementById("newStaffName");
-const v = input.value.trim();
-if(!v) return;
-if(staffListData.includes(v)){ alert("すでに登録されています"); return; }
-staffListData.push(v);
-saveList("torihiki_staffList", staffListData);
-input.value = "";
-renderStaffManageList();
-renderSelectOptions(staff, staffListData, true);
+/* 初期データ(appsコレクションが空の場合だけ、1件だけ登録します) */
+const SEED_APP = {
+  name: "取引確認書",
+  description: "免許証などをOCRで読み取り、取引確認書をPDFで作成します。",
+  url: "https://rie4649.github.io/torihiki01/",
+  icon: "🪪",
+  createdAt: Date.now()
 };
 
-document.getElementById("addTemplateBtn").onclick = ()=>{
-const input = document.getElementById("newTemplateName");
-const v = input.value.trim();
-if(!v) return;
-if(templateListData.includes(v)){ alert("すでに登録されています"); return; }
-templateListData.push(v);
-saveList("torihiki_templateList", templateListData);
-input.value = "";
-renderTemplateManageList();
-renderSelectOptions(template, templateListData, true);
+async function seedIfEmpty(){
+  const snap = await appsCol.limit(1).get();
+  if(snap.empty){
+    await appsCol.add(SEED_APP);
+  }
+}
+seedIfEmpty().catch(err=>console.error("seed error", err));
+
+/* ============================================================
+   状態
+   ============================================================ */
+let APPS = [];
+let REVIEWS_UNSUB = null;
+let currentAppId = null;
+let selectedStars = 0;
+let editingAppId = null;
+
+const gridEl = document.getElementById("grid");
+const featuredWrapEl = document.getElementById("featuredWrap");
+const searchInputEl = document.getElementById("searchInput");
+let searchTerm = "";
+
+/* ============================================================
+   Firestoreのリアルタイム同期
+   ============================================================ */
+const loadStatusEl = document.getElementById("loadStatus");
+let firstSnapshotReceived = false;
+
+const loadTimeoutId = setTimeout(()=>{
+  if(!firstSnapshotReceived){
+    loadStatusEl.textContent = "⚠️ データの読み込みに時間がかかっています。広告ブロッカーなどの拡張機能がFirebaseへの通信をブロックしていないか確認するか、シークレットウィンドウで開いてみてください。";
+    loadStatusEl.style.color = "#B45309";
+  }
+}, 6000);
+
+appsCol.onSnapshot(snapshot=>{
+  firstSnapshotReceived = true;
+  clearTimeout(loadTimeoutId);
+  loadStatusEl.style.display = "none";
+  APPS = snapshot.docs.map(d=>({ id: d.id, ...d.data() }))
+    .sort((a,b)=>{
+      const ao = a.order != null ? a.order : Infinity;
+      const bo = b.order != null ? b.order : Infinity;
+      if(ao !== bo) return ao - bo;
+      return (b.createdAt||0) - (a.createdAt||0);
+    });
+  renderGrid();
+  if(document.getElementById("settingsBody")){
+    renderManageList();
+  }
+  if(currentAppId && !document.getElementById("detailScreen").classList.contains("hidden")){
+    const app = APPS.find(a=>a.id === currentAppId);
+    if(app) renderDetailStaticPart(app);
+  }
+}, err=>{
+  console.error("apps sync error", err);
+  loadStatusEl.textContent = "⚠️ データの読み込みに失敗しました: " + err.message;
+  loadStatusEl.style.color = "#B91C1C";
+});
+
+/* ============================================================
+   画面遷移
+   ============================================================ */
+function showScreen(name){
+  ["storeScreen","detailScreen","settingsScreen"].forEach(id=>{
+    document.getElementById(id).classList.toggle("hidden", id !== name);
+  });
+  document.getElementById("backBtn").style.visibility = (name === "storeScreen") ? "hidden" : "visible";
+  document.getElementById("settingsBtn").style.visibility = (name === "storeScreen") ? "visible" : "hidden";
+  window.scrollTo(0,0);
+}
+
+document.getElementById("settingsBtn").onclick = ()=>{ showScreen("settingsScreen"); renderManageList(); };
+document.getElementById("backBtn").onclick = ()=>{
+  if(REVIEWS_UNSUB){ REVIEWS_UNSUB(); REVIEWS_UNSUB = null; }
+  showScreen("storeScreen");
 };
 
-["newStaffName","newTemplateName"].forEach(id=>{
-document.getElementById(id).addEventListener("keydown", (e)=>{
-if(e.key === "Enter"){
-e.preventDefault();
-document.getElementById(id === "newStaffName" ? "addStaffBtn" : "addTemplateBtn").click();
+/* ============================================================
+   ストア一覧(新着ヒーロー + 一覧)
+   ============================================================ */
+function isImageUrl(icon){
+  if(!icon) return false;
+  if(/^https?:\/\//.test(icon)) return true;
+  return /\.(png|jpg|jpeg|gif|svg|webp)(\?.*)?$/i.test(icon);
 }
-});
+
+async function ratingSummaryFor(appId){
+  const snap = await reviewsCol.where("appId","==",appId).get();
+  const ratings = snap.docs.map(d=>d.data().rating || 0);
+  const count = ratings.length;
+  const avg = count ? (ratings.reduce((a,b)=>a+b,0) / count) : 0;
+  return { avg, count };
+}
+
+function starString(avg){
+  const rounded = Math.round(avg);
+  return "★★★★★☆☆☆☆☆".slice(5 - rounded, 10 - rounded);
+}
+
+function renderFeatured(){
+  featuredWrapEl.innerHTML = "";
+  if(APPS.length === 0) return;
+  const app = APPS.reduce((newest, a)=> (a.createdAt||0) > (newest.createdAt||0) ? a : newest, APPS[0]);
+  const iconInner = isImageUrl(app.icon) ? `<img src="${app.icon}" alt="">` : (app.icon || "🧩");
+
+  const card = document.createElement("button");
+  card.className = "featured";
+  card.type = "button";
+  card.innerHTML = `
+    <div class="featured-eyebrow">NEW — 新着アプリ</div>
+    <div class="featured-body">
+      <div class="featured-icon">${iconInner}</div>
+      <div>
+        <div class="featured-name">${escapeHtml(app.name)}</div>
+        <div class="featured-desc">${escapeHtml(app.description||"")}</div>
+      </div>
+    </div>
+    <div class="featured-btn">開く →</div>
+  `;
+  card.onclick = ()=> openDetail(app.id);
+  featuredWrapEl.appendChild(card);
+}
+
+async function renderGrid(){
+  renderFeatured();
+  const term = searchTerm.trim().toLowerCase();
+  const filtered = APPS.filter(a=>{
+    return !term ||
+      (a.name||"").toLowerCase().includes(term) ||
+      (a.description||"").toLowerCase().includes(term);
+  });
+
+  gridEl.innerHTML = "";
+
+  if(filtered.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "条件に合うアプリが見つかりませんでした。";
+    gridEl.appendChild(empty);
+    return;
+  }
+
+  for(const app of filtered){
+    const row = document.createElement("button");
+    row.className = "app-row";
+    row.type = "button";
+
+    const iconInner = isImageUrl(app.icon) ? `<img src="${app.icon}" alt="">` : (app.icon || "🧩");
+
+    row.innerHTML = `
+      <div class="app-icon">${iconInner}</div>
+      <div class="app-info">
+        <div class="app-name">${escapeHtml(app.name)}</div>
+        <div class="app-stars" data-stars-for="${app.id}">評価を読み込み中…</div>
+        <div class="app-desc">${escapeHtml(app.description||"")}</div>
+      </div>
+      <div class="open-pill">開く</div>
+    `;
+    row.onclick = ()=> openDetail(app.id);
+    gridEl.appendChild(row);
+
+    ratingSummaryFor(app.id).then(({avg,count})=>{
+      const el = row.querySelector(`[data-stars-for="${app.id}"]`);
+      if(el) el.textContent = count ? `${starString(avg)} (${count}件)` : "レビューなし";
+    });
+  }
+}
+
+searchInputEl.addEventListener("input", (e)=>{ searchTerm = e.target.value; renderGrid(); });
+
+/* ============================================================
+   アプリ詳細画面
+   ============================================================ */
+function renderDetailStaticPart(app){
+  document.getElementById("detailIcon").innerHTML = isImageUrl(app.icon) ? `<img src="${app.icon}" alt="">` : (app.icon || "🧩");
+  document.getElementById("detailName").textContent = app.name;
+  document.getElementById("detailDesc").textContent = app.description || "";
+  document.getElementById("detailOpenBtn").onclick = ()=> window.open(app.url, "_blank", "noopener");
+
+  const qrEl = document.getElementById("qrcode");
+  qrEl.innerHTML = "";
+  new QRCode(qrEl, { text: app.url, width: 148, height: 148, colorDark: "#14264A", colorLight: "#ffffff" });
+}
+
+function openDetail(appId){
+  const app = APPS.find(a=>a.id === appId);
+  if(!app) return;
+  currentAppId = appId;
+  selectedStars = 0;
+  renderStarPicker();
+  document.getElementById("reviewAuthor").value = "";
+  document.getElementById("reviewComment").value = "";
+  renderDetailStaticPart(app);
+  watchReviews(appId);
+  showScreen("detailScreen");
+}
+
+function watchReviews(appId){
+  if(REVIEWS_UNSUB) REVIEWS_UNSUB();
+  REVIEWS_UNSUB = reviewsCol.where("appId","==",appId).onSnapshot(snapshot=>{
+    const reviews = snapshot.docs.map(d=>({id:d.id, ...d.data()}))
+      .sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+    renderReviews(reviews);
+  }, err=>console.error("reviews sync error", err));
+}
+
+function renderReviews(reviews){
+  const count = reviews.length;
+  const avg = count ? reviews.reduce((s,r)=>s + (r.rating||0), 0) / count : 0;
+
+  document.getElementById("ratingBig").textContent = count ? avg.toFixed(1) : "–";
+  document.getElementById("ratingStars").textContent = count ? starString(avg) : "☆☆☆☆☆";
+  document.getElementById("ratingCount").textContent = count ? `${count}件のレビュー` : "レビューはまだありません";
+
+  const listEl = document.getElementById("reviewList");
+  if(count === 0){
+    listEl.innerHTML = `<p class="no-reviews">まだレビューがありません。最初のレビューを書いてみてください。</p>`;
+    return;
+  }
+  listEl.innerHTML = reviews.map(r=>`
+    <div class="review-item">
+      <div class="review-top">
+        <span class="review-author">${escapeHtml(r.author || "匿名")}</span>
+        <span class="review-date">${formatDate(r.createdAt)}</span>
+      </div>
+      <div class="review-stars">${starString(r.rating||0)}</div>
+      <div class="review-comment">${escapeHtml(r.comment||"")}</div>
+    </div>
+  `).join("");
+}
+
+/* ===== 星の手動選択(レビュー投稿時) ===== */
+function renderStarPicker(){
+  const spans = document.querySelectorAll("#starPicker span");
+  spans.forEach(s=>{
+    s.classList.toggle("active", parseInt(s.dataset.v,10) <= selectedStars);
+  });
+}
+document.querySelectorAll("#starPicker span").forEach(s=>{
+  s.onclick = ()=>{ selectedStars = parseInt(s.dataset.v,10); renderStarPicker(); };
 });
 
-/* ===== 画面遷移(メイン ⇔ 設定) ===== */
-function showSettings(){
-document.getElementById("mainScreen").classList.add("hidden");
-document.getElementById("settingsScreen").classList.remove("hidden");
-document.getElementById("backBtn").style.visibility = "visible";
-document.getElementById("settingsBtn").style.visibility = "hidden";
-renderStaffManageList();
-renderTemplateManageList();
-window.scrollTo(0,0);
-}
-function showMain(){
-document.getElementById("settingsScreen").classList.add("hidden");
-document.getElementById("mainScreen").classList.remove("hidden");
-document.getElementById("backBtn").style.visibility = "hidden";
-document.getElementById("settingsBtn").style.visibility = "visible";
-window.scrollTo(0,0);
-}
-document.getElementById("settingsBtn").onclick = showSettings;
-document.getElementById("backBtn").onclick = showMain;
-
-renderSelectOptions(staff, staffListData);
-renderSelectOptions(template, templateListData);
-
-const ids = [
-"receiptNo","tradeDate","template","staff","name",
-"birthday","address","docType","docNo","memo"
-];
-function todayStr(){
-const d = new Date();
-return d.toISOString().slice(0,10);
-}
-function makeReceiptNo(){
-const d = new Date();
-const y = d.getFullYear();
-const m = String(d.getMonth()+1).padStart(2,"0");
-const day = String(d.getDate()).padStart(2,"0");
-const n = String(Math.floor(Math.random()*900)+100);
-return y + m + day + "-" + n;
-}
-tradeDate.value = todayStr();
-receiptNo.value = makeReceiptNo();
-ids.forEach(id=>{
-document.getElementById(id).addEventListener("input", updatePaper);
-});
-function updatePaper(){
-pReceipt.textContent = receiptNo.value;
-pDate.textContent = tradeDate.value;
-pTemplate.textContent = template.value;
-pName.textContent = name.value;
-pAddress.textContent = address.value;
-pBirthday.textContent = birthday.value;
-pDocType.textContent = docType.value;
-pDocNo.textContent = docNo.value;
-pStaff.textContent = staff.value;
-pMemo.textContent = memo.value;
-}
-updatePaper();
-function cropWhiteSpace(sourceCanvas){
-const ctx = sourceCanvas.getContext("2d");
-const w = sourceCanvas.width;
-const h = sourceCanvas.height;
-const data = ctx.getImageData(0,0,w,h).data;
-let top = h, left = w, right = 0, bottom = 0;
-const threshold = 245;
-for(let y=0; y<h; y++){
-for(let x=0; x<w; x++){
-const i = (y*w+x)*4;
-const r = data[i];
-const g = data[i+1];
-const b = data[i+2];
-const a = data[i+3];
-if(a > 20 && !(r > threshold && g > threshold && b > threshold)){
-if(x < left) left = x;
-if(x > right) right = x;
-if(y < top) top = y;
-if(y > bottom) bottom = y;
-}
-}
-}
-if(right <= left || bottom <= top){
-return sourceCanvas.toDataURL("image/png");
-}
-const padding = 25;
-left = Math.max(0, left - padding);
-top = Math.max(0, top - padding);
-right = Math.min(w, right + padding);
-bottom = Math.min(h, bottom + padding);
-const cropW = right - left;
-const cropH = bottom - top;
-const newCanvas = document.createElement("canvas");
-newCanvas.width = cropW;
-newCanvas.height = cropH;
-const newCtx = newCanvas.getContext("2d");
-newCtx.drawImage(
-sourceCanvas,
-left, top, cropW, cropH,
-0, 0, cropW, cropH
-);
-return newCanvas.toDataURL("image/png");
-}
-function imageFileToCroppedDataURL(file){
-return new Promise((resolve)=>{
-const img = new Image();
-img.onload = function(){
-const canvas = document.createElement("canvas");
-canvas.width = img.width;
-canvas.height = img.height;
-const ctx = canvas.getContext("2d");
-ctx.drawImage(img,0,0);
-resolve(cropWhiteSpace(canvas));
+document.getElementById("submitReviewBtn").onclick = async ()=>{
+  const author = document.getElementById("reviewAuthor").value.trim() || "匿名";
+  const comment = document.getElementById("reviewComment").value.trim();
+  if(selectedStars === 0){ alert("星の数を選んでください"); return; }
+  if(!comment){ alert("感想を入力してください"); return; }
+  try{
+    await reviewsCol.add({
+      appId: currentAppId,
+      author, rating: selectedStars, comment,
+      createdAt: Date.now()
+    });
+    document.getElementById("reviewComment").value = "";
+    document.getElementById("reviewAuthor").value = "";
+    selectedStars = 0;
+    renderStarPicker();
+  }catch(err){
+    console.error(err);
+    alert("投稿に失敗しました。時間をおいて再試行してください。");
+  }
 };
-img.src = URL.createObjectURL(file);
-});
+
+/* ============================================================
+   設定画面(アプリのCRUD + 並び替え)
+   ============================================================ */
+
+function renderManageList(){
+  const listEl = document.getElementById("manageList");
+  listEl.innerHTML = "";
+  if(APPS.length === 0){
+    listEl.innerHTML = `<p class="no-reviews">まだアプリが登録されていません</p>`;
+    return;
+  }
+  APPS.forEach((app, idx)=>{
+    const row = document.createElement("div");
+    row.className = "manage-row";
+    const iconInner = isImageUrl(app.icon) ? `<img src="${app.icon}" alt="">` : (app.icon || "🧩");
+    row.innerHTML = `
+      <div class="reorder-btns">
+        <button class="icon-btn-sm reorder-btn" data-act="up" ${idx===0 ? "disabled" : ""}>▲</button>
+        <button class="icon-btn-sm reorder-btn" data-act="down" ${idx===APPS.length-1 ? "disabled" : ""}>▼</button>
+      </div>
+      <div class="app-icon">${iconInner}</div>
+      <div class="info"><b>${escapeHtml(app.name)}</b><span>${escapeHtml(app.url||"")}</span></div>
+      <div class="manage-actions">
+        <button class="icon-btn-sm" style="background:#E9E9EB;color:var(--ink)" data-act="edit">編集</button>
+        <button class="icon-btn-sm" style="background:var(--danger);color:#fff" data-act="delete">削除</button>
+      </div>
+    `;
+    row.querySelector('[data-act="up"]').onclick = ()=> moveApp(app, -1);
+    row.querySelector('[data-act="down"]').onclick = ()=> moveApp(app, 1);
+    row.querySelector('[data-act="edit"]').onclick = ()=> startEdit(app);
+    row.querySelector('[data-act="delete"]').onclick = ()=> deleteApp(app);
+    listEl.appendChild(row);
+  });
 }
-fileInput.addEventListener("change", async function(e){
-const file = e.target.files[0];
-if(!file) return;
-preview.alt = "読み込み中…";
-if(file.type.startsWith("image/")){
-const cropped = await imageFileToCroppedDataURL(file);
-preview.src = cropped;
-pPreview.src = cropped;
-ocrImageData = cropped;
-return;
+
+async function moveApp(app, direction){
+  const idx = APPS.findIndex(a=>a.id === app.id);
+  const swapIdx = idx + direction;
+  if(swapIdx < 0 || swapIdx >= APPS.length) return;
+  const reordered = APPS.slice();
+  [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
+  try{
+    const batch = db.batch();
+    reordered.forEach((a, i)=>{ batch.set(appsCol.doc(a.id), { order: i }, { merge: true }); });
+    await batch.commit();
+  }catch(err){
+    console.error(err);
+    alert("並び替えに失敗しました。時間をおいて再試行してください。");
+  }
 }
-if(file.type === "application/pdf"){
-const buffer = await file.arrayBuffer();
-const pdf = await pdfjsLib.getDocument({data:buffer}).promise;
-const page = await pdf.getPage(1);
-const viewport = page.getViewport({scale:3});
-const canvas = document.createElement("canvas");
-const ctx = canvas.getContext("2d");
-canvas.width = viewport.width;
-canvas.height = viewport.height;
-await page.render({
-canvasContext:ctx,
-viewport:viewport
-}).promise;
-const cropped = cropWhiteSpace(canvas);
-preview.src = cropped;
-pPreview.src = cropped;
-ocrImageData = cropped;
+
+function startEdit(app){
+  editingAppId = app.id;
+  document.getElementById("formTitle").textContent = `「${app.name}」を編集`;
+  document.getElementById("fName").value = app.name || "";
+  document.getElementById("fDescription").value = app.description || "";
+  document.getElementById("fUrl").value = app.url || "";
+  document.getElementById("fIcon").value = app.icon || "";
+  document.getElementById("cancelEditBtn").classList.remove("hidden");
+  window.scrollTo(0, document.body.scrollHeight);
 }
-});
-/* 免許証は地紋・ホログラム・小さい文字が多く、原寸のままだと文字化けしやすいので、
-   拡大 + グレースケール化 + コントラスト強調をしてからOCRにかける */
-function preprocessForOCR(dataUrl){
-return new Promise((resolve)=>{
-const img = new Image();
-img.onload = function(){
-const scale = 2.2;
-const canvas = document.createElement("canvas");
-canvas.width = Math.round(img.width * scale);
-canvas.height = Math.round(img.height * scale);
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = true;
-ctx.imageSmoothingQuality = "high";
-ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
-const d = imgData.data;
-for(let i=0; i<d.length; i+=4){
-const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
-let v = (gray - 128) * 1.55 + 128;
-v = Math.max(0, Math.min(255, v));
-d[i] = d[i+1] = d[i+2] = v;
+
+document.getElementById("cancelEditBtn").onclick = resetForm;
+
+function resetForm(){
+  editingAppId = null;
+  document.getElementById("formTitle").textContent = "新しいアプリを追加";
+  ["fName","fDescription","fUrl","fIcon"].forEach(id=>document.getElementById(id).value = "");
+  document.getElementById("cancelEditBtn").classList.add("hidden");
 }
-ctx.putImageData(imgData, 0, 0);
-resolve(canvas.toDataURL("image/png"));
+
+document.getElementById("saveAppBtn").onclick = async ()=>{
+  const data = {
+    name: document.getElementById("fName").value.trim(),
+    description: document.getElementById("fDescription").value.trim(),
+    url: document.getElementById("fUrl").value.trim(),
+    icon: document.getElementById("fIcon").value.trim()
+  };
+  if(!data.name || !data.url){ alert("アプリ名とURLは必須です"); return; }
+  try{
+    if(editingAppId){
+      await appsCol.doc(editingAppId).set(data, {merge:true});
+    }else{
+      data.createdAt = Date.now();
+      data.order = APPS.length;
+      await appsCol.add(data);
+    }
+    resetForm();
+  }catch(err){
+    console.error(err);
+    alert("保存に失敗しました。時間をおいて再試行してください。");
+  }
 };
-img.src = dataUrl;
-});
+
+async function deleteApp(app){
+  if(!confirm(`「${app.name}」を削除しますか？(レビューも消えます)`)) return;
+  try{
+    await appsCol.doc(app.id).delete();
+    const reviewsSnap = await reviewsCol.where("appId","==",app.id).get();
+    const batch = db.batch();
+    reviewsSnap.forEach(doc=>batch.delete(doc.ref));
+    await batch.commit();
+  }catch(err){
+    console.error(err);
+    alert("削除に失敗しました。時間をおいて再試行してください。");
+  }
 }
 
-function pad2(n){ return String(n).padStart(2,"0"); }
-
-function eraToISO(era, y, m, d){
-let year;
-if(era === "昭和") year = 1925 + y;
-else if(era === "平成") year = 1988 + y;
-else if(era === "令和") year = 2018 + y;
-else return null;
-return year + "-" + pad2(m) + "-" + pad2(d);
+/* ============================================================
+   ユーティリティ
+   ============================================================ */
+function escapeHtml(str){
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : str;
+  return div.innerHTML;
 }
 
-/* OCRで読み取った生テキストから、氏名・住所・生年月日・書類番号らしき部分を抜き出す */
-function extractFieldsFromOcr(text){
-const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-const joined = text.replace(/[ \t]+/g,"");
-const out = {};
-
-const numMatch = joined.match(/\d{12}/);
-if(numMatch) out.docNo = numMatch[0];
-
-const eraMatch = joined.match(/(昭和|平成|令和)(\d{1,2})年(\d{1,2})月(\d{1,2})日/);
-if(eraMatch){
-const iso = eraToISO(eraMatch[1], parseInt(eraMatch[2],10), parseInt(eraMatch[3],10), parseInt(eraMatch[4],10));
-if(iso) out.birthday = iso;
-}else{
-const westernMatch = joined.match(/(19\d{2}|20\d{2})年(\d{1,2})月(\d{1,2})日/);
-if(westernMatch) out.birthday = westernMatch[1] + "-" + pad2(westernMatch[2]) + "-" + pad2(westernMatch[3]);
-}
-
-const addrMatch = text.match(/(北海道|東京都|大阪府|京都府|.{2,3}県)[^\n]{0,40}/);
-if(addrMatch) out.address = addrMatch[0].replace(/\s+/g,"").trim();
-
-const nameCandidate = lines.find(l =>
-/^[一-龠ぁ-んァ-ヶー\s　]{2,20}$/.test(l) &&
-!/(免許|証明|第|種類|生年|住所|交付|有効|殿|様|氏名)/.test(l)
-);
-if(nameCandidate) out.name = nameCandidate.replace(/[\s　]+/g," ").trim();
-
-return out;
-}
-
-function syncOcrFieldsToForm(fields){
-const filled = [];
-if(fields.name && !name.value){ name.value = fields.name; filled.push("氏名"); }
-if(fields.address && !address.value){ address.value = fields.address; filled.push("住所"); }
-if(fields.birthday && !birthday.value){ birthday.value = fields.birthday; filled.push("生年月日"); }
-if(fields.docNo && !docNo.value){ docNo.value = fields.docNo; filled.push("本人確認書類番号"); }
-updatePaper();
-const note = document.getElementById("syncedNote");
-if(filled.length){
-note.textContent = "反映しました: " + filled.join("・") + "(内容が違う場合は上のフォームで直接修正してください)";
-}else{
-note.textContent = "住所・氏名・生年月日・番号を自動検出できませんでした。手入力してください。";
-}
-}
-
-async function runOCR(){
-if(!ocrImageData){
-alert("先に本人確認書類をアップロードしてください");
-return;
-}
-ocrText.value = "画像を補正しています…";
-document.getElementById("syncedNote").textContent = "";
-try{
-const ocrSource = await preprocessForOCR(ocrImageData);
-ocrText.value = "読み取り中です。少し待ってください…";
-const result = await Tesseract.recognize(
-ocrSource,
-"jpn+eng",
-{
-logger: m => {
-if(m.status === "recognizing text"){
-const p = Math.round(m.progress * 100);
-ocrText.value = "OCR読み取り中… " + p + "%";
-}
-}
-}
-);
-const text = result.data.text || "";
-if(text.trim()){
-ocrText.value = text;
-const fields = extractFieldsFromOcr(text);
-syncOcrFieldsToForm(fields);
-}else{
-ocrText.value = "文字を読み取れませんでした。画像を明るく、まっすぐ・大きめに撮って再試行してください。";
-}
-}catch(err){
-ocrText.value = "OCRでエラーが出ました。画像で再アップロードして試してください。";
-console.error(err);
-}
-}
-async function makePDF(){
-updatePaper();
-if(!name.value){
-alert("氏名を入力してください");
-return;
-}
-const { jsPDF } = window.jspdf;
-const paperEl = document.getElementById("paper");
-const canvas = await html2canvas(paperEl, {
-scale:2,
-useCORS:true
-});
-const imgData = canvas.toDataURL("image/png");
-const pdf = new jsPDF("p","mm","a4");
-pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
-pdf.save("取引確認書_" + receiptNo.value + ".pdf");
-}
-function clearForm(){
-if(!confirm("入力内容をクリアしますか？")) return;
-name.value = "";
-birthday.value = "";
-address.value = "";
-docNo.value = "";
-memo.value = "";
-ocrText.value = "";
-document.getElementById("syncedNote").textContent = "";
-preview.removeAttribute("src");
-pPreview.removeAttribute("src");
-ocrImageData = "";
-receiptNo.value = makeReceiptNo();
-tradeDate.value = todayStr();
-updatePaper();
+function formatDate(ms){
+  if(!ms) return "";
+  const d = new Date(ms);
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
 }
 </script>
 </body>
