@@ -35,6 +35,16 @@ button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10
 .docImg{margin-top:15px;border:1px solid #333;min-height:330px;display:flex;align-items:center;justify-content:center;background:#fff}
 .docImg img{max-width:100%;max-height:390px}
 .small{font-size:13px;color:#666;line-height:1.7}
+.hidden{display:none}
+.topBar{max-width:1100px;margin:0 auto;padding:15px 15px 0;display:flex;justify-content:flex-end}
+.settingsRow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee}
+.settingsRow span{flex:1;font-size:15px}
+.settingsRow button{padding:7px 14px;font-size:13px}
+.addRow{display:flex;gap:8px;margin-top:12px}
+.addRow input{flex:1}
+.addRow button{width:auto;padding:11px 20px}
+h3.sectionTitle{margin:26px 0 10px;font-size:17px}
+h3.sectionTitle:first-child{margin-top:0}
 
 /* ===== 免許証トリミング用モーダル(独自のシンプルなドラッグ選択) ===== */
 .cropModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;align-items:center;justify-content:center;padding:16px;flex-direction:column}
@@ -62,7 +72,11 @@ body{background:white}
 </head>
 <body>
 
-<div class="wrap">
+<div class="topBar">
+<button class="gray" onclick="openSettings()" style="width:auto;padding:10px 18px;">⚙ 設定</button>
+</div>
+
+<div class="wrap" id="mainScreen">
 <div class="card inputCard">
 <h1>取引確認書 作成画面</h1>
 <div class="grid">
@@ -184,7 +198,39 @@ body{background:white}
 </div>
 </div>
 
-<!-- ===== 免許証トリミング モーダル(マウスでドラッグして四角を描くだけ) ===== -->
+<!-- ============ 設定画面 ============ -->
+<div class="wrap hidden" id="settingsScreen">
+<div class="card">
+<h1>設定</h1>
+
+<h3 class="sectionTitle">担当者リスト</h3>
+<div id="staffManageList"></div>
+<div class="addRow">
+<input type="text" id="newStaffName" placeholder="担当者名を入力">
+<button class="blue" onclick="addStaff()">追加</button>
+</div>
+
+<h3 class="sectionTitle">テンプレート項目</h3>
+<div id="templateManageList"></div>
+<div class="addRow">
+<input type="text" id="newTemplateName" placeholder="テンプレート名を入力">
+<button class="blue" onclick="addTemplate()">追加</button>
+</div>
+
+<h3 class="sectionTitle">受付番号の採番ルール</h3>
+<select id="receiptRuleSelect">
+<option value="dateRandom">日付＋ランダム3桁(例: 20260708-123)</option>
+<option value="dateSeq">日付＋当日の通し番号(例: 20260708-001)</option>
+<option value="seq">通し番号のみ、累計(例: 000123)</option>
+<option value="yearSeq">年＋通し番号(例: 2026-0001)</option>
+</select>
+<p class="small">次に「入力クリア」または新規作成した時から、選んだルールで受付番号が作られます。</p>
+
+<div class="btns" style="grid-template-columns:1fr;margin-top:24px">
+<button class="dark" onclick="closeSettings()">設定を閉じて戻る</button>
+</div>
+</div>
+</div>
 <div class="cropModal" id="cropModal">
   <div class="cropStage" id="cropStage">
     <img id="cropImage" draggable="false">
@@ -205,6 +251,156 @@ let ocrImageData = "";
 // 運転免許証の実寸(85.6mm × 54.0mm)の縦横比
 const LICENSE_RATIO = 85.6 / 54.0;
 
+/* ============================================================
+   設定(担当者・テンプレート・受付番号ルール)
+   ============================================================ */
+const DEFAULT_STAFF_LIST = ["古川","石原","宮嶋","長村","川村"];
+const DEFAULT_TEMPLATE_LIST = ["本人確認あり","その他"];
+
+function loadJSON(key, fallback){
+try{
+const raw = localStorage.getItem(key);
+if(!raw) return fallback;
+const parsed = JSON.parse(raw);
+return Array.isArray(parsed) && parsed.length ? parsed : fallback;
+}catch(e){
+return fallback;
+}
+}
+
+let staffList = loadJSON("torihiki_staffList", DEFAULT_STAFF_LIST.slice());
+let templateList = loadJSON("torihiki_templateList", DEFAULT_TEMPLATE_LIST.slice());
+let receiptRule = localStorage.getItem("torihiki_receiptRule") || "dateRandom";
+
+function saveStaffList(){ localStorage.setItem("torihiki_staffList", JSON.stringify(staffList)); }
+function saveTemplateList(){ localStorage.setItem("torihiki_templateList", JSON.stringify(templateList)); }
+function saveReceiptRule(){ localStorage.setItem("torihiki_receiptRule", receiptRule); }
+
+function escapeHtml(str){
+const div = document.createElement("div");
+div.textContent = str == null ? "" : str;
+return div.innerHTML;
+}
+
+function renderStaffSelect(){
+const current = staff.value;
+staff.innerHTML = staffList.map(s=>`<option>${escapeHtml(s)}</option>`).join("");
+if(staffList.includes(current)) staff.value = current;
+}
+
+function renderTemplateSelect(){
+const current = template.value;
+template.innerHTML = templateList.map(t=>`<option>${escapeHtml(t)}</option>`).join("");
+if(templateList.includes(current)) template.value = current;
+}
+
+function renderStaffManageList(){
+staffManageList.innerHTML = staffList.map((s,i)=>`
+<div class="settingsRow">
+<span>${escapeHtml(s)}</span>
+<button class="gray" onclick="editStaff(${i})">編集</button>
+<button class="gray" onclick="removeStaff(${i})">削除</button>
+</div>
+`).join("") || `<p class="small">担当者が登録されていません</p>`;
+}
+
+function renderTemplateManageList(){
+templateManageList.innerHTML = templateList.map((t,i)=>`
+<div class="settingsRow">
+<span>${escapeHtml(t)}</span>
+<button class="gray" onclick="editTemplate(${i})">編集</button>
+<button class="gray" onclick="removeTemplate(${i})">削除</button>
+</div>
+`).join("") || `<p class="small">テンプレート項目が登録されていません</p>`;
+}
+
+function addStaff(){
+const name = newStaffName.value.trim();
+if(!name){ alert("担当者名を入力してください"); return; }
+if(staffList.includes(name)){ alert("すでに登録されています"); return; }
+staffList.push(name);
+saveStaffList();
+newStaffName.value = "";
+renderStaffSelect();
+renderStaffManageList();
+}
+
+function editStaff(index){
+const newName = prompt("担当者名を編集してください", staffList[index]);
+if(newName === null) return;
+const trimmed = newName.trim();
+if(!trimmed){ alert("空にはできません"); return; }
+if(staffList.includes(trimmed) && trimmed !== staffList[index]){ alert("すでに登録されています"); return; }
+staffList[index] = trimmed;
+saveStaffList();
+renderStaffSelect();
+renderStaffManageList();
+}
+
+function removeStaff(index){
+if(staffList.length <= 1){ alert("最低1人は登録しておいてください"); return; }
+if(!confirm(`「${staffList[index]}」を削除しますか？`)) return;
+staffList.splice(index,1);
+saveStaffList();
+renderStaffSelect();
+renderStaffManageList();
+}
+
+function addTemplate(){
+const name = newTemplateName.value.trim();
+if(!name){ alert("テンプレート名を入力してください"); return; }
+if(templateList.includes(name)){ alert("すでに登録されています"); return; }
+templateList.push(name);
+saveTemplateList();
+newTemplateName.value = "";
+renderTemplateSelect();
+renderTemplateManageList();
+}
+
+function editTemplate(index){
+const newName = prompt("テンプレート名を編集してください", templateList[index]);
+if(newName === null) return;
+const trimmed = newName.trim();
+if(!trimmed){ alert("空にはできません"); return; }
+if(templateList.includes(trimmed) && trimmed !== templateList[index]){ alert("すでに登録されています"); return; }
+templateList[index] = trimmed;
+saveTemplateList();
+renderTemplateSelect();
+renderTemplateManageList();
+}
+
+function removeTemplate(index){
+if(templateList.length <= 1){ alert("最低1つは登録しておいてください"); return; }
+if(!confirm(`「${templateList[index]}」を削除しますか？`)) return;
+templateList.splice(index,1);
+saveTemplateList();
+renderTemplateSelect();
+renderTemplateManageList();
+}
+
+function openSettings(){
+renderStaffManageList();
+renderTemplateManageList();
+receiptRuleSelect.value = receiptRule;
+mainScreen.classList.add("hidden");
+settingsScreen.classList.remove("hidden");
+window.scrollTo(0,0);
+}
+
+function closeSettings(){
+settingsScreen.classList.add("hidden");
+mainScreen.classList.remove("hidden");
+window.scrollTo(0,0);
+}
+
+receiptRuleSelect.addEventListener("change", ()=>{
+receiptRule = receiptRuleSelect.value;
+saveReceiptRule();
+});
+
+renderStaffSelect();
+renderTemplateSelect();
+
 const ids = [
 "receiptNo","tradeDate","template","staff","name",
 "birthday","address","docType","docNo","memo"
@@ -220,8 +416,31 @@ const d = new Date();
 const y = d.getFullYear();
 const m = String(d.getMonth()+1).padStart(2,"0");
 const day = String(d.getDate()).padStart(2,"0");
+const dateStr = y + m + day;
+
+if(receiptRule === "dateSeq"){
+const key = "torihiki_seq_" + dateStr;
+const seq = parseInt(localStorage.getItem(key) || "0", 10) + 1;
+localStorage.setItem(key, String(seq));
+return dateStr + "-" + String(seq).padStart(3,"0");
+}
+
+if(receiptRule === "seq"){
+const seq = parseInt(localStorage.getItem("torihiki_seq_all") || "0", 10) + 1;
+localStorage.setItem("torihiki_seq_all", String(seq));
+return String(seq).padStart(6,"0");
+}
+
+if(receiptRule === "yearSeq"){
+const key = "torihiki_seq_year_" + y;
+const seq = parseInt(localStorage.getItem(key) || "0", 10) + 1;
+localStorage.setItem(key, String(seq));
+return y + "-" + String(seq).padStart(4,"0");
+}
+
+// dateRandom(デフォルト)
 const n = String(Math.floor(Math.random()*900)+100);
-return y + m + day + "-" + n;
+return dateStr + "-" + n;
 }
 
 tradeDate.value = todayStr();
