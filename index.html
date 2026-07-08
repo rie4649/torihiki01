@@ -190,7 +190,12 @@ body{background:white}
   <div class="cropWrap">
     <img id="cropImage">
   </div>
-  <p class="cropHint">四隅をドラッグして、免許証の枠に合わせてください</p>
+  <p class="cropHint">まず🔍+で免許証部分を拡大し、次に枠をドラッグして免許証の四隅に合わせてください</p>
+  <div class="cropBtns">
+    <button class="gray" onclick="zoomCropper(0.2)">🔍＋ 拡大</button>
+    <button class="gray" onclick="zoomCropper(-0.2)">🔍－ 縮小</button>
+    <button class="gray" onclick="resetCropBox()">↺ 枠をリセット</button>
+  </div>
   <div class="cropBtns">
     <button class="blue" onclick="confirmCrop()">この位置で切り取る</button>
     <button class="gray" onclick="closeCropper()">キャンセル</button>
@@ -352,12 +357,21 @@ if(cropper){ cropper.destroy(); cropper = null; }
 cropper = new Cropper(cropImage, {
 aspectRatio: LICENSE_RATIO,
 viewMode: 1,
-autoCropArea: 0.9,
+autoCropArea: 0.25,
 movable: true,
 zoomable: true,
+zoomOnWheel: true,
 scalable: false,
 background: false
 });
+}
+
+function zoomCropper(ratio){
+if(cropper) cropper.zoom(ratio);
+}
+
+function resetCropBox(){
+if(cropper) cropper.reset();
 }
 
 function closeCropper(){
