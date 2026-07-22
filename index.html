@@ -83,7 +83,7 @@ body{background:white}
 
 <div>
 <label>受付番号</label>
-<input id="receiptNo" readonly>
+<input id="receiptNo" readonly tabindex="-1" style="background:#f2f2f2;color:#555;cursor:not-allowed;">
 </div>
 
 <div>
@@ -120,7 +120,6 @@ body{background:white}
 <div class="birthdayRow">
 <select id="birthdayEra">
 <option value="明治">明治</option>
-<option value="大正">大正</option>
 <option value="昭和" selected>昭和</option>
 <option value="平成">平成</option>
 <option value="令和">令和</option>
@@ -335,96 +334,4 @@ const newName = prompt("担当者名を編集してください", staffList[inde
 if(newName === null) return;
 const trimmed = newName.trim();
 if(!trimmed){ alert("空にはできません"); return; }
-if(staffList.includes(trimmed) && trimmed !== staffList[index]){ alert("すでに登録されています"); return; }
-staffList[index] = trimmed;
-saveStaffList();
-renderStaffSelect();
-renderStaffManageList();
-}
-
-function removeStaff(index){
-if(staffList.length <= 1){ alert("最低1人は登録しておいてください"); return; }
-if(!confirm(`「${staffList[index]}」を削除しますか？`)) return;
-staffList.splice(index,1);
-saveStaffList();
-renderStaffSelect();
-renderStaffManageList();
-}
-
-function addTemplate(){
-const name = newTemplateName.value.trim();
-if(!name){ alert("テンプレート名を入力してください"); return; }
-if(templateList.includes(name)){ alert("すでに登録されています"); return; }
-templateList.push(name);
-saveTemplateList();
-newTemplateName.value = "";
-renderTemplateSelect();
-renderTemplateManageList();
-}
-
-function editTemplate(index){
-const newName = prompt("テンプレート名を編集してください", templateList[index]);
-if(newName === null) return;
-const trimmed = newName.trim();
-if(!trimmed){ alert("空にはできません"); return; }
-if(templateList.includes(trimmed) && trimmed !== templateList[index]){ alert("すでに登録されています"); return; }
-templateList[index] = trimmed;
-saveTemplateList();
-renderTemplateSelect();
-renderTemplateManageList();
-}
-
-function removeTemplate(index){
-if(templateList.length <= 1){ alert("最低1つは登録しておいてください"); return; }
-if(!confirm(`「${templateList[index]}」を削除しますか？`)) return;
-templateList.splice(index,1);
-saveTemplateList();
-renderTemplateSelect();
-renderTemplateManageList();
-}
-
-function openSettings(){
-renderStaffManageList();
-renderTemplateManageList();
-receiptRuleSelect.value = receiptRule;
-mainScreen.classList.add("hidden");
-settingsScreen.classList.remove("hidden");
-window.scrollTo(0,0);
-}
-
-function closeSettings(){
-settingsScreen.classList.add("hidden");
-mainScreen.classList.remove("hidden");
-window.scrollTo(0,0);
-}
-
-receiptRuleSelect.addEventListener("change", ()=>{
-receiptRule = receiptRuleSelect.value;
-saveReceiptRule();
-});
-
-renderStaffSelect();
-renderTemplateSelect();
-
-/* ============================================================
-   生年月日(昭和・平成・令和などの和暦選択)
-   ============================================================ */
-const ERA_INFO = {
-"明治":{maxYear:45},
-"大正":{maxYear:15},
-"昭和":{maxYear:64},
-"平成":{maxYear:31},
-"令和":{maxYear:(new Date().getFullYear() - 2019 + 1)}
-};
-
-function populateBirthdayYearOptions(keepValue){
-const era = birthdayEra.value;
-const info = ERA_INFO[era];
-const current = keepValue ? birthdayYear.value : "";
-let opts = `<option value="">-</option>`;
-for(let y=1; y<=info.maxYear; y++){
-const label = y === 1 ? "元" : y;
-opts += `<option value="${y}">${label}</option>`;
-}
-birthdayYear.innerHTML = opts;
-if(current && parseInt(current,10) <=
+if(st
