@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>取引確認書</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
@@ -36,7 +39,7 @@ button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10
 .docImg img{max-width:100%;max-height:390px}
 .small{font-size:13px;color:#666;line-height:1.7}
 .hidden{display:none}
-.topBar{max-width:1100px;margin:0 auto;padding:15px 15px 0;display:flex;justify-content:flex-end}
+.topBar{max-width:1100px;margin:0 auto;padding:15px 15px 0;display:flex;justify-content:flex-end;gap:10px}
 .settingsRow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee}
 .settingsRow span{flex:1;font-size:15px}
 .settingsRow button{padding:7px 14px;font-size:13px}
@@ -56,6 +59,14 @@ h3.sectionTitle:first-child{margin-top:0}
 .cropBtns{display:flex;gap:10px;margin:12px auto 0;width:100%;max-width:640px}
 .cropBtns button{flex:1}
 
+/* ===== インストール案内モーダル ===== */
+.installModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:16px}
+.installModal.show{display:flex}
+.installBox{background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%}
+.installBox h2{margin-top:0;font-size:18px}
+.installBox p{font-size:14px;line-height:1.8;color:#333}
+.installBox button{margin-top:14px;width:100%}
+
 @media(max-width:850px){
 .grid{grid-template-columns:1fr}
 .btns{grid-template-columns:1fr}
@@ -73,6 +84,7 @@ body{background:white}
 <body>
 
 <div class="topBar">
+<button class="gray" onclick="addToHomeScreen()" style="width:auto;padding:10px 18px;">📲 アプリを追加</button>
 <button class="gray" onclick="openSettings()" style="width:auto;padding:10px 18px;">⚙ 設定</button>
 </div>
 
@@ -248,6 +260,15 @@ body{background:white}
   </div>
 </div>
 
+<div class="installModal" id="installModal">
+  <div class="installBox">
+    <h2 id="installTitle">アプリをホーム画面に追加</h2>
+    <p id="installText"></p>
+    <button class="blue" id="installActionBtn" style="display:none;" onclick="triggerInstallPrompt()">追加する</button>
+    <button class="gray" onclick="closeInstallModal()">閉じる</button>
+  </div>
+</div>
+
 <script>
 // PDF部品(pdf.js)が読み込めていない場合でも、他の機能が止まらないようにする
 if(typeof pdfjsLib !== "undefined"){
@@ -261,6 +282,54 @@ console.error("pdf.jsの初期化に失敗しました", e);
 
 // 運転免許証の実寸(85.6mm × 54.0mm)の縦横比
 const LICENSE_RATIO = 85.6 / 54.0;
+
+/* ============================================================
+   ホーム画面に追加(PWAインストール)
+   ============================================================ */
+let deferredInstallPrompt = null;
+
+window.addEventListener("beforeinstallprompt", (e)=>{
+e.preventDefault();
+deferredInstallPrompt = e;
+});
+
+function isIOS(){
+return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function addToHomeScreen(){
+const title = document.getElementById("installTitle");
+const text = document.getElementById("installText");
+const actionBtn = document.getElementById("installActionBtn");
+
+if(deferredInstallPrompt){
+title.textContent = "アプリをホーム画面に追加";
+text.textContent = "このアプリをホーム画面に追加すると、アイコンをタップするだけですぐに開けるようになります。";
+actionBtn.style.display = "block";
+}else if(isIOS()){
+title.textContent = "ホーム画面に追加する方法(iPhone/iPad)";
+text.innerHTML = "① 画面下の「共有」ボタン(四角から矢印が出ているアイコン)をタップ<br>② メニューを下にスクロールして「ホーム画面に追加」をタップ<br>③ 右上の「追加」をタップして完了です。";
+actionBtn.style.display = "none";
+}else{
+title.textContent = "ホーム画面に追加する方法";
+text.innerHTML = "お使いのブラウザのメニュー(右上の「⋮」など)を開き、「アプリをインストール」または「ホーム画面に追加」を選んでください。表示されない場合は、ページを最新の状態に更新してから再度お試しください。";
+actionBtn.style.display = "none";
+}
+
+document.getElementById("installModal").classList.add("show");
+}
+
+function closeInstallModal(){
+document.getElementById("installModal").classList.remove("show");
+}
+
+async function triggerInstallPrompt(){
+if(!deferredInstallPrompt) return;
+deferredInstallPrompt.prompt();
+await deferredInstallPrompt.userChoice;
+deferredInstallPrompt = null;
+closeInstallModal();
+}
 
 /* ============================================================
    設定(担当者・テンプレート・受付番号ルール)
