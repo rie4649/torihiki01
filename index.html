@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>取引確認書</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 body{margin:0;font-family:Arial,"Hiragino Sans","Yu Gothic",sans-serif;background:#eef1f5;color:#222}
 .wrap{max-width:1100px;margin:20px auto;padding:15px}
@@ -25,7 +23,9 @@ button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10
 .gray{background:#ddd;color:#111}
 .previewBox{border:2px dashed #999;border-radius:12px;padding:12px;background:#fafafa;text-align:center}
 .previewBox img{max-width:100%;max-height:300px}
-.ocrBox{background:#fff8df;border:2px solid #e3c45f;border-radius:12px;padding:12px;margin-top:12px}
+.birthdayRow{display:flex;gap:6px;align-items:center}
+.birthdayRow select{flex:1}
+.birthdayRow span{white-space:nowrap;font-size:14px}
 .paper{width:794px;min-height:1123px;background:white;margin:20px auto;padding:50px;box-sizing:border-box;border:1px solid #ccc}
 .paper h1{letter-spacing:8px;border-bottom:3px double #111;padding-bottom:12px}
 .info{display:grid;grid-template-columns:180px 1fr;border-top:1px solid #333;border-left:1px solid #333;margin-top:25px}
@@ -117,7 +117,21 @@ body{background:white}
 
 <div>
 <label>生年月日</label>
-<input type="date" id="birthday">
+<div class="birthdayRow">
+<select id="birthdayEra">
+<option value="明治">明治</option>
+<option value="大正">大正</option>
+<option value="昭和" selected>昭和</option>
+<option value="平成">平成</option>
+<option value="令和">令和</option>
+</select>
+<select id="birthdayYear"></select>
+<span>年</span>
+<select id="birthdayMonth"></select>
+<span>月</span>
+<select id="birthdayDay"></select>
+<span>日</span>
+</div>
 </div>
 
 <div class="full">
@@ -155,20 +169,12 @@ body{background:white}
 
 <button class="gray" onclick="openCropper()" style="margin-top:10px;width:100%;">📐 免許証の位置を指定して切り取る</button>
 <p class="small">開いた画面で、免許証の周りをマウスでドラッグして四角く囲んでください。だいたいの位置で大丈夫です。</p>
-
-<button class="blue" onclick="runOCR()" style="margin-top:12px;width:100%;">OCRで文字を読み取る</button>
-<div class="ocrBox">
-<label>OCR読み取り結果</label>
-<textarea id="ocrText" placeholder="ここに読み取った文字が表示されます"></textarea>
-<button class="blue" onclick="autofillFromOCR()" style="margin-top:10px;width:100%;">📝 読み取り結果から自動入力</button>
-<p class="small">OCR完了後は自動で入力を試みますが、誤認識もあるため、氏名・住所・生年月日・番号は必ず見比べて修正してください。</p>
-</div>
 </div>
 
 </div>
 
 <div class="btns">
-<button class="dark" onclick="makePDF()">PDF保存</button>
+<button class="dark" onclick="saveAsJPEG()">JPEG保存</button>
 <button class="gray" onclick="window.print()">印刷</button>
 <button class="gray" onclick="clearForm()">入力クリア</button>
 </div>
@@ -247,7 +253,6 @@ body{background:white}
 pdfjsLib.GlobalWorkerOptions.workerSrc =
 "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-let ocrImageData = "";
 // 運転免許証の実寸(85.6mm × 54.0mm)の縦横比
 const LICENSE_RATIO = 85.6 / 54.0;
 
@@ -401,440 +406,25 @@ saveReceiptRule();
 renderStaffSelect();
 renderTemplateSelect();
 
-const ids = [
-"receiptNo","tradeDate","template","staff","name",
-"birthday","address","docType","docNo","memo"
-];
-
-function todayStr(){
-const d = new Date();
-return d.toISOString().slice(0,10);
-}
-
-function makeReceiptNo(){
-const d = new Date();
-const y = d.getFullYear();
-const m = String(d.getMonth()+1).padStart(2,"0");
-const day = String(d.getDate()).padStart(2,"0");
-const dateStr = y + m + day;
-
-if(receiptRule === "dateSeq"){
-const key = "torihiki_seq_" + dateStr;
-const seq = parseInt(localStorage.getItem(key) || "0", 10) + 1;
-localStorage.setItem(key, String(seq));
-return dateStr + "-" + String(seq).padStart(3,"0");
-}
-
-if(receiptRule === "seq"){
-const seq = parseInt(localStorage.getItem("torihiki_seq_all") || "0", 10) + 1;
-localStorage.setItem("torihiki_seq_all", String(seq));
-return String(seq).padStart(6,"0");
-}
-
-if(receiptRule === "yearSeq"){
-const key = "torihiki_seq_year_" + y;
-const seq = parseInt(localStorage.getItem(key) || "0", 10) + 1;
-localStorage.setItem(key, String(seq));
-return y + "-" + String(seq).padStart(4,"0");
-}
-
-// dateRandom(デフォルト)
-const n = String(Math.floor(Math.random()*900)+100);
-return dateStr + "-" + n;
-}
-
-tradeDate.value = todayStr();
-receiptNo.value = makeReceiptNo();
-
-ids.forEach(id=>{
-document.getElementById(id).addEventListener("input", updatePaper);
-});
-
-function updatePaper(){
-pReceipt.textContent = receiptNo.value;
-pDate.textContent = tradeDate.value;
-pTemplate.textContent = template.value;
-pName.textContent = name.value;
-pAddress.textContent = address.value;
-pBirthday.textContent = birthday.value;
-pDocType.textContent = docType.value;
-pDocNo.textContent = docNo.value;
-pStaff.textContent = staff.value;
-pMemo.textContent = memo.value;
-}
-updatePaper();
-
-function cropBackground(sourceCanvas){
-const ctx = sourceCanvas.getContext("2d");
-const w = sourceCanvas.width;
-const h = sourceCanvas.height;
-const data = ctx.getImageData(0,0,w,h).data;
-
-function pixelAt(x,y){
-const i = (y*w+x)*4;
-return [data[i], data[i+1], data[i+2], data[i+3]];
-}
-
-// 四隅の色を平均して「背景色」とみなす(白でも青でも他の色でも対応)
-const samplePoints = [[2,2],[w-3,2],[2,h-3],[w-3,h-3]];
-let br=0, bgc=0, bb=0;
-samplePoints.forEach(([x,y])=>{
-const p = pixelAt(Math.max(0,x), Math.max(0,y));
-br += p[0]; bgc += p[1]; bb += p[2];
-});
-br/=4; bgc/=4; bb/=4;
-
-const colorThreshold = 35; // 背景色との色の差がこれ以上あれば「中身」とみなす
-let top = h, left = w, right = 0, bottom = 0;
-for(let y=0; y<h; y++){
-for(let x=0; x<w; x++){
-const i = (y*w+x)*4;
-const r = data[i];
-const g = data[i+1];
-const b = data[i+2];
-const a = data[i+3];
-const diff = Math.sqrt((r-br)**2 + (g-bgc)**2 + (b-bb)**2);
-if(a > 20 && diff > colorThreshold){
-if(x < left) left = x;
-if(x > right) right = x;
-if(y < top) top = y;
-if(y > bottom) bottom = y;
-}
-}
-}
-if(right <= left || bottom <= top){
-return sourceCanvas.toDataURL("image/png");
-}
-const padding = Math.round(Math.min(w,h) * 0.04);
-left = Math.max(0, left - padding);
-top = Math.max(0, top - padding);
-right = Math.min(w, right + padding);
-bottom = Math.min(h, bottom + padding);
-const cropW = right - left;
-const cropH = bottom - top;
-const newCanvas = document.createElement("canvas");
-newCanvas.width = cropW;
-newCanvas.height = cropH;
-const newCtx = newCanvas.getContext("2d");
-newCtx.drawImage(
-sourceCanvas,
-left, top, cropW, cropH,
-0, 0, cropW, cropH
-);
-return newCanvas.toDataURL("image/png");
-}
-
-function imageFileToCroppedDataURL(file){
-return new Promise((resolve)=>{
-const img = new Image();
-img.onload = function(){
-const canvas = document.createElement("canvas");
-canvas.width = img.width;
-canvas.height = img.height;
-const ctx = canvas.getContext("2d");
-ctx.drawImage(img,0,0);
-resolve(cropBackground(canvas));
-};
-img.src = URL.createObjectURL(file);
-});
-}
-
-fileInput.addEventListener("change", async function(e){
-const file = e.target.files[0];
-if(!file) return;
-preview.alt = "読み込み中…";
-
-if(file.type.startsWith("image/")){
-const cropped = await imageFileToCroppedDataURL(file);
-preview.src = cropped;
-pPreview.src = cropped;
-ocrImageData = cropped;
-return;
-}
-
-if(file.type === "application/pdf"){
-const buffer = await file.arrayBuffer();
-const pdf = await pdfjsLib.getDocument({data:buffer}).promise;
-const page = await pdf.getPage(1);
-const viewport = page.getViewport({scale:3});
-const canvas = document.createElement("canvas");
-const ctx = canvas.getContext("2d");
-canvas.width = viewport.width;
-canvas.height = viewport.height;
-await page.render({
-canvasContext:ctx,
-viewport:viewport
-}).promise;
-const cropped = cropBackground(canvas);
-preview.src = cropped;
-pPreview.src = cropped;
-ocrImageData = cropped;
-}
-});
-
 /* ============================================================
-   免許証サイズへのトリミング(独自の軽量ドラッグ選択)
+   生年月日(昭和・平成・令和などの和暦選択)
    ============================================================ */
-let cropStartX = 0, cropStartY = 0, cropCurX = 0, cropCurY = 0, cropDragging = false;
-
-function openCropper(){
-if(!preview.src){
-alert("先に本人確認書類の画像をアップロードしてください");
-return;
-}
-cropImage.src = preview.src;
-cropRect.style.display = "none";
-cropModal.classList.add("show");
-}
-
-function closeCropper(){
-cropModal.classList.remove("show");
-}
-
-function getPointFromEvent(e){
-const rect = cropImage.getBoundingClientRect();
-const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-return {
-x: Math.min(Math.max(clientX - rect.left, 0), rect.width),
-y: Math.min(Math.max(clientY - rect.top, 0), rect.height)
+const ERA_INFO = {
+"明治":{maxYear:45},
+"大正":{maxYear:15},
+"昭和":{maxYear:64},
+"平成":{maxYear:31},
+"令和":{maxYear:(new Date().getFullYear() - 2019 + 1)}
 };
-}
 
-function updateCropRectStyle(){
-const x = Math.min(cropStartX, cropCurX);
-const y = Math.min(cropStartY, cropCurY);
-const w = Math.abs(cropCurX - cropStartX);
-const h = Math.abs(cropCurY - cropStartY);
-cropRect.style.left = x + "px";
-cropRect.style.top = y + "px";
-cropRect.style.width = w + "px";
-cropRect.style.height = h + "px";
+function populateBirthdayYearOptions(keepValue){
+const era = birthdayEra.value;
+const info = ERA_INFO[era];
+const current = keepValue ? birthdayYear.value : "";
+let opts = `<option value="">-</option>`;
+for(let y=1; y<=info.maxYear; y++){
+const label = y === 1 ? "元" : y;
+opts += `<option value="${y}">${label}</option>`;
 }
-
-cropImage.addEventListener("pointerdown", (e)=>{
-e.preventDefault();
-const p = getPointFromEvent(e);
-cropStartX = p.x; cropStartY = p.y;
-cropCurX = p.x; cropCurY = p.y;
-cropDragging = true;
-cropRect.style.display = "block";
-updateCropRectStyle();
-});
-
-window.addEventListener("pointermove", (e)=>{
-if(!cropDragging) return;
-const p = getPointFromEvent(e);
-cropCurX = p.x; cropCurY = p.y;
-updateCropRectStyle();
-});
-
-window.addEventListener("pointerup", ()=>{
-cropDragging = false;
-});
-
-function confirmCrop(){
-const w = Math.abs(cropCurX - cropStartX);
-const h = Math.abs(cropCurY - cropStartY);
-if(w < 15 || h < 15){
-alert("免許証の周りをもう少し大きくドラッグして囲んでください");
-return;
-}
-
-const rect = cropImage.getBoundingClientRect();
-const naturalW = cropImage.naturalWidth;
-const naturalH = cropImage.naturalHeight;
-const scaleX = naturalW / rect.width;
-const scaleY = naturalH / rect.height;
-
-const x = Math.min(cropStartX, cropCurX) * scaleX;
-const y = Math.min(cropStartY, cropCurY) * scaleY;
-const srcW = w * scaleX;
-const srcH = h * scaleY;
-
-const outW = 1600;
-const outH = Math.round(1600 / LICENSE_RATIO);
-const canvas = document.createElement("canvas");
-canvas.width = outW;
-canvas.height = outH;
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = true;
-ctx.imageSmoothingQuality = "high";
-ctx.drawImage(cropImage, x, y, srcW, srcH, 0, 0, outW, outH);
-
-const dataUrl = canvas.toDataURL("image/png");
-preview.src = dataUrl;
-pPreview.src = dataUrl;
-ocrImageData = dataUrl;
-closeCropper();
-}
-
-/* ============================================================
-   OCR精度向上のための前処理(グレースケール化 + コントラスト強調)
-   ============================================================ */
-function preprocessForOCR(dataUrl){
-return new Promise((resolve)=>{
-const img = new Image();
-img.onload = ()=>{
-// 画像が小さい場合は拡大してから処理する(文字を認識しやすくするため)
-const minWidth = 1400;
-const scale = img.width < minWidth ? (minWidth / img.width) : 1;
-const canvas = document.createElement("canvas");
-canvas.width = Math.round(img.width * scale);
-canvas.height = Math.round(img.height * scale);
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = true;
-ctx.imageSmoothingQuality = "high";
-ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-const imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
-const data = imageData.data;
-const contrast = 1.6; // コントラスト強調の強さ
-for(let i=0; i<data.length; i+=4){
-const gray = data[i]*0.299 + data[i+1]*0.587 + data[i+2]*0.114;
-let val = (gray - 128) * contrast + 128;
-val = Math.max(0, Math.min(255, val));
-data[i] = data[i+1] = data[i+2] = val;
-}
-ctx.putImageData(imageData, 0, 0);
-resolve(canvas.toDataURL("image/png"));
-};
-img.src = dataUrl;
-});
-}
-
-async function runOCR(){
-if(!ocrImageData){
-alert("先に本人確認書類をアップロードしてください");
-return;
-}
-ocrText.value = "画像を最適化しています…";
-try{
-const processedImage = await preprocessForOCR(ocrImageData);
-
-ocrText.value = "読み取り中です。少し待ってください…";
-const result = await Tesseract.recognize(
-processedImage,
-"jpn+eng",
-{
-logger: m => {
-if(m.status === "recognizing text"){
-const p = Math.round(m.progress * 100);
-ocrText.value = "OCR読み取り中… " + p + "%";
-}
-}
-}
-);
-ocrText.value = result.data.text || "文字を読み取れませんでした。画像を明るく、まっすぐ撮って再試行してください。";
-if(result.data.text){
-autofillFromOCR(true);
-}
-}catch(err){
-ocrText.value = "OCRでエラーが出ました。画像で再アップロードして試してください。";
-console.error(err);
-}
-}
-
-/* ============================================================
-   OCR結果から氏名・住所・生年月日・番号を自動入力
-   ============================================================ */
-function parseOCRText(text){
-const result = {name:"", birthday:"", address:"", docNo:""};
-const lines = text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
-
-// 免許証番号(12桁の数字)
-const docNoMatch = text.replace(/\s/g,"").match(/\d{12}/);
-if(docNoMatch){
-result.docNo = docNoMatch[0];
-}
-
-// 生年月日(和暦)
-const eraMap = {"明治":1868,"大正":1912,"昭和":1926,"平成":1989,"令和":2019};
-const eraMatch = text.match(/(明治|大正|昭和|平成|令和)\s*(元|\d{1,2})年\s*(\d{1,2})月\s*(\d{1,2})日/);
-if(eraMatch){
-const eraYear = eraMatch[2] === "元" ? 1 : parseInt(eraMatch[2],10);
-const year = eraMap[eraMatch[1]] + eraYear - 1;
-const month = String(parseInt(eraMatch[3],10)).padStart(2,"0");
-const day = String(parseInt(eraMatch[4],10)).padStart(2,"0");
-result.birthday = `${year}-${month}-${day}`;
-}else{
-// 西暦表記(例: 1990年05月01日 / 1990.05.01 / 1990-05-01)
-const western = text.match(/((19|20)\d{2})[年.\-\/](\d{1,2})[月.\-\/](\d{1,2})日?/);
-if(western){
-const month = String(parseInt(western[3],10)).padStart(2,"0");
-const day = String(parseInt(western[4],10)).padStart(2,"0");
-result.birthday = `${western[1]}-${month}-${day}`;
-}
-}
-
-// 住所(都道府県から始まる行)
-const addressLine = lines.find(l => /^(北海道|(青森|岩手|宮城|秋田|山形|福島|茨城|栃木|群馬|埼玉|千葉|東京|神奈川|新潟|富山|石川|福井|山梨|長野|岐阜|静岡|愛知|三重|滋賀|京都|大阪|兵庫|奈良|和歌山|鳥取|島根|岡山|広島|山口|徳島|香川|愛媛|高知|福岡|佐賀|長崎|熊本|大分|宮崎|鹿児島|沖縄)[都道府県])/.test(l));
-if(addressLine) result.address = addressLine;
-
-// 氏名(数字を含まず、除外ワードにも当たらない短めの行)
-const excludeKeywords = ["運転免許証","公安委員会","免許","本籍","有効期限","眼鏡等","種類","備考","氏名","生年月日","住所","交付","番号","第一種","第二種"];
-const nameLine = lines.find(l=>{
-if(l.length < 2 || l.length > 12) return false;
-if(/\d/.test(l)) return false;
-if(excludeKeywords.some(k=>l.includes(k))) return false;
-if(addressLine && l === addressLine) return false;
-return /^[ぁ-んァ-ヶ一-龠々ー\s　]+$/.test(l);
-});
-if(nameLine) result.name = nameLine.replace(/[\s　]+/g,"");
-
-return result;
-}
-
-function autofillFromOCR(silent){
-const text = ocrText.value;
-if(!text || text.includes("読み取り中") || text.includes("最適化")){
-if(!silent) alert("先にOCRを実行してください");
-return;
-}
-const parsed = parseOCRText(text);
-if(parsed.name) name.value = parsed.name;
-if(parsed.birthday) birthday.value = parsed.birthday;
-if(parsed.address) address.value = parsed.address;
-if(parsed.docNo) docNo.value = parsed.docNo;
-updatePaper();
-if(!silent){
-alert("読み取れた項目を自動入力しました。内容を確認・修正してください。");
-}
-}
-
-async function makePDF(){
-updatePaper();
-if(!name.value){
-alert("氏名を入力してください");
-return;
-}
-const { jsPDF } = window.jspdf;
-const paperEl = document.getElementById("paper");
-const canvas = await html2canvas(paperEl, {
-scale:2,
-useCORS:true
-});
-const imgData = canvas.toDataURL("image/png");
-const pdf = new jsPDF("p","mm","a4");
-pdf.addImage(imgData, "PNG", 0, 0, 210, 297);
-pdf.save("取引確認書_" + receiptNo.value + ".pdf");
-}
-
-function clearForm(){
-if(!confirm("入力内容をクリアしますか？")) return;
-name.value = "";
-birthday.value = "";
-address.value = "";
-docNo.value = "";
-memo.value = "";
-ocrText.value = "";
-preview.removeAttribute("src");
-pPreview.removeAttribute("src");
-ocrImageData = "";
-receiptNo.value = makeReceiptNo();
-tradeDate.value = todayStr();
-updatePaper();
-}
-</script>
-</body>
-</html>
+birthdayYear.innerHTML = opts;
+if(current && parseInt(current,10) <=
