@@ -161,7 +161,7 @@ body{background:white}
 <div class="full">
 <label>本人確認書類 PDF / 画像アップロード</label>
 <input type="file" id="fileInput" accept="image/*,application/pdf">
-<p class="small">画像の白や色つきの余白をできるだけ自動でカットして表示します。</p>
+<p class="small">画像の白や色つきの余白をできるだけ自動でカットして表示します。うまく表示されない場合は、別のファイル形式(JPEG/PNG)で保存し直してから再度お試しください。</p>
 <div class="previewBox">
 <img id="preview" alt="ここに確認書類が表示されます">
 </div>
@@ -334,4 +334,145 @@ const newName = prompt("担当者名を編集してください", staffList[inde
 if(newName === null) return;
 const trimmed = newName.trim();
 if(!trimmed){ alert("空にはできません"); return; }
-if(st
+if(staffList.includes(trimmed) && trimmed !== staffList[index]){ alert("すでに登録されています"); return; }
+staffList[index] = trimmed;
+saveStaffList();
+renderStaffSelect();
+renderStaffManageList();
+}
+
+function removeStaff(index){
+if(staffList.length <= 1){ alert("最低1人は登録しておいてください"); return; }
+if(!confirm(`「${staffList[index]}」を削除しますか？`)) return;
+staffList.splice(index,1);
+saveStaffList();
+renderStaffSelect();
+renderStaffManageList();
+}
+
+function addTemplate(){
+const name = newTemplateName.value.trim();
+if(!name){ alert("テンプレート名を入力してください"); return; }
+if(templateList.includes(name)){ alert("すでに登録されています"); return; }
+templateList.push(name);
+saveTemplateList();
+newTemplateName.value = "";
+renderTemplateSelect();
+renderTemplateManageList();
+}
+
+function editTemplate(index){
+const newName = prompt("テンプレート名を編集してください", templateList[index]);
+if(newName === null) return;
+const trimmed = newName.trim();
+if(!trimmed){ alert("空にはできません"); return; }
+if(templateList.includes(trimmed) && trimmed !== templateList[index]){ alert("すでに登録されています"); return; }
+templateList[index] = trimmed;
+saveTemplateList();
+renderTemplateSelect();
+renderTemplateManageList();
+}
+
+function removeTemplate(index){
+if(templateList.length <= 1){ alert("最低1つは登録しておいてください"); return; }
+if(!confirm(`「${templateList[index]}」を削除しますか？`)) return;
+templateList.splice(index,1);
+saveTemplateList();
+renderTemplateSelect();
+renderTemplateManageList();
+}
+
+function openSettings(){
+renderStaffManageList();
+renderTemplateManageList();
+receiptRuleSelect.value = receiptRule;
+mainScreen.classList.add("hidden");
+settingsScreen.classList.remove("hidden");
+window.scrollTo(0,0);
+}
+
+function closeSettings(){
+settingsScreen.classList.add("hidden");
+mainScreen.classList.remove("hidden");
+window.scrollTo(0,0);
+}
+
+receiptRuleSelect.addEventListener("change", ()=>{
+receiptRule = receiptRuleSelect.value;
+saveReceiptRule();
+});
+
+renderStaffSelect();
+renderTemplateSelect();
+
+/* ============================================================
+   生年月日(明治・昭和・平成・令和の和暦選択)
+   ============================================================ */
+const ERA_INFO = {
+"明治":{maxYear:45},
+"昭和":{maxYear:64},
+"平成":{maxYear:31},
+"令和":{maxYear:(new Date().getFullYear() - 2019 + 1)}
+};
+
+function populateBirthdayYearOptions(keepValue){
+const era = birthdayEra.value;
+const info = ERA_INFO[era];
+const current = keepValue ? birthdayYear.value : "";
+let opts = `<option value="">-</option>`;
+for(let y=1; y<=info.maxYear; y++){
+const label = y === 1 ? "元" : y;
+opts += `<option value="${y}">${label}</option>`;
+}
+birthdayYear.innerHTML = opts;
+if(current && parseInt(current,10) <= info.maxYear){
+birthdayYear.value = current;
+}
+}
+
+function populateBirthdayMonthDay(){
+let mOpts = `<option value="">-</option>`;
+for(let m=1;m<=12;m++) mOpts += `<option value="${m}">${m}</option>`;
+birthdayMonth.innerHTML = mOpts;
+
+let dOpts = `<option value="">-</option>`;
+for(let d=1;d<=31;d++) dOpts += `<option value="${d}">${d}</option>`;
+birthdayDay.innerHTML = dOpts;
+}
+
+populateBirthdayYearOptions(false);
+populateBirthdayMonthDay();
+
+birthdayEra.addEventListener("change", ()=>{
+populateBirthdayYearOptions(false);
+updatePaper();
+});
+birthdayYear.addEventListener("change", updatePaper);
+birthdayMonth.addEventListener("change", updatePaper);
+birthdayDay.addEventListener("change", updatePaper);
+
+function getBirthdayText(){
+const era = birthdayEra.value;
+const y = birthdayYear.value;
+const m = birthdayMonth.value;
+const d = birthdayDay.value;
+if(!y || !m || !d) return "";
+const yLabel = y === "1" ? "元" : y;
+return `${era}${yLabel}年${m}月${d}日`;
+}
+
+const ids = [
+"tradeDate","template","staff","name",
+"address","docType","docNo","memo"
+];
+
+function todayStr(){
+const d = new Date();
+return d.toISOString().slice(0,10);
+}
+
+function makeReceiptNo(){
+const d = new Date();
+const y = d.getFullYear();
+const m = String(d.getMonth()+1).padStart(2,"0");
+const day = String(d.getDate()).padStart
