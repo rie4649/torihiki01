@@ -30,14 +30,16 @@ button{padding:14px;font-size:16px;font-weight:bold;border:none;border-radius:10
 .birthdayRow{display:flex;gap:6px;align-items:center}
 .birthdayRow select{flex:1}
 .birthdayRow span{white-space:nowrap;font-size:14px}
-.paper{width:794px;min-height:1123px;background:white;margin:20px auto;padding:50px;box-sizing:border-box;border:1px solid #ccc}
-.paper h1{letter-spacing:8px;border-bottom:3px double #111;padding-bottom:12px}
-.info{display:grid;grid-template-columns:180px 1fr;border-top:1px solid #333;border-left:1px solid #333;margin-top:25px}
-.info div{padding:11px;border-right:1px solid #333;border-bottom:1px solid #333;min-height:24px}
+.paper{width:794px;min-height:1123px;background:white;margin:20px auto;padding:40px;box-sizing:border-box;border:1px solid #ccc}
+.paper h1{letter-spacing:8px;border-bottom:3px double #111;padding-bottom:12px;margin-top:0}
+.info{display:grid;grid-template-columns:180px 1fr;border-top:1px solid #333;border-left:1px solid #333;margin-top:20px}
+.info div{padding:7px 11px;border-right:1px solid #333;border-bottom:1px solid #333;min-height:20px}
 .head{background:#f0f0f0;font-weight:bold}
-.docTitle{margin-top:28px;font-size:20px;font-weight:bold;border-bottom:2px solid #111;padding-bottom:6px}
-.docImg{margin-top:15px;border:1px solid #333;min-height:330px;display:flex;align-items:center;justify-content:center;background:#fff}
-.docImg img{max-width:100%;max-height:390px}
+.docTitle{margin-top:18px;font-size:18px;font-weight:bold;border-bottom:2px solid #111;padding-bottom:5px}
+.docImg{margin-top:10px;border:1px solid #333;min-height:130px;display:flex;align-items:center;justify-content:center;background:#fff}
+.docImg img{max-width:100%;max-height:180px}
+.shikirImg{margin-top:10px;border:1px solid #333;min-height:220px;display:flex;align-items:center;justify-content:center;background:#fff}
+.shikirImg img{max-width:100%;max-height:360px}
 .small{font-size:13px;color:#666;line-height:1.7}
 .hidden{display:none}
 .topBar{max-width:1100px;margin:0 auto;padding:15px 15px 0;display:flex;justify-content:flex-end;gap:10px}
@@ -54,8 +56,8 @@ h3.sectionTitle:first-child{margin-top:0}
 .cropModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;align-items:center;justify-content:center;padding:16px;flex-direction:column}
 .cropModal.show{display:flex}
 .cropStage{position:relative;background:#fff;border-radius:12px;padding:8px;max-width:92vw;display:inline-block;user-select:none;touch-action:none}
-.cropStage img{display:block;max-width:88vw;max-height:65vh;user-select:none}
-.cropRect{position:absolute;border:2px solid #0b63ce;background:rgba(11,99,206,0.18);display:none;box-sizing:border-box}
+.cropStage img{display:block;max-width:88vw;max-height:65vh;user-select:none;pointer-events:none}
+.cropRect{position:absolute;border:2px solid #0b63ce;background:rgba(11,99,206,0.18);display:none;box-sizing:border-box;pointer-events:none}
 .cropHint{color:#fff;text-align:center;font-size:13px;margin:10px auto 0;max-width:640px}
 .cropBtns{display:flex;gap:10px;margin:12px auto 0;width:100%;max-width:640px}
 .cropBtns button{flex:1}
@@ -74,7 +76,7 @@ h3.sectionTitle:first-child{margin-top:0}
 .paper{width:100%;min-height:auto;padding:25px}
 }
 @media print{
-.inputCard{display:none}
+.topBar,.inputCard{display:none}
 body{background:white}
 .wrap{margin:0;padding:0}
 .card{box-shadow:none;margin:0;padding:0}
@@ -114,13 +116,7 @@ body{background:white}
 
 <div>
 <label>担当者</label>
-<select id="staff">
-<option>古川</option>
-<option>石原</option>
-<option>宮嶋</option>
-<option>長村</option>
-<option>川村</option>
-</select>
+<select id="staff"></select>
 </div>
 
 <div>
@@ -183,6 +179,16 @@ body{background:white}
 <p class="small">開いた画面で、免許証の周りをマウスでドラッグして四角く囲んでください。だいたいの位置で大丈夫です。</p>
 </div>
 
+<!-- ============ 仕切書 ============ -->
+<div class="full">
+<label>仕切書 PDF / 画像アップロード</label>
+<input type="file" id="shikirInput" accept="image/*,application/pdf">
+<p class="small">買取内容が載っている仕切書をそのまま貼り付けます。PDFの場合は1ページ目を自動で画像にします。余白も自動でカットします。</p>
+<div class="previewBox">
+<img id="shikirPreview" alt="ここに仕切書が表示されます">
+</div>
+</div>
+
 </div>
 
 <div class="btns">
@@ -207,10 +213,17 @@ body{background:white}
 <div class="head">担当者</div><div id="pStaff"></div>
 <div class="head">備考</div><div id="pMemo"></div>
 </div>
+
 <div class="docTitle">本人確認書類</div>
 <div class="docImg">
 <img id="pPreview">
 </div>
+
+<div class="docTitle">買取内容(仕切書)</div>
+<div class="shikirImg">
+<img id="pShikir">
+</div>
+
 <p class="small">上記内容に基づき、本人確認および取引確認を行いました。</p>
 </div>
 </div>
@@ -249,12 +262,13 @@ body{background:white}
 </div>
 </div>
 </div>
+
 <div class="cropModal" id="cropModal">
   <div class="cropStage" id="cropStage">
     <img id="cropImage" draggable="false">
     <div class="cropRect" id="cropRect"></div>
   </div>
-  <p class="cropHint">免許証の周りをマウスでドラッグして四角く囲んでください</p>
+  <p class="cropHint">免許証の周りをマウス(指)でドラッグして四角く囲んでください</p>
   <div class="cropBtns">
     <button class="blue" onclick="confirmCrop()">この位置で切り取る</button>
     <button class="gray" onclick="closeCropper()">キャンセル</button>
@@ -271,7 +285,7 @@ body{background:white}
 </div>
 
 <script>
-// サービスワーカーの登録(すでにあるsw.jsを実際に使うようにする)
+// サービスワーカーの登録
 if("serviceWorker" in navigator){
 window.addEventListener("load", ()=>{
 navigator.serviceWorker.register("sw.js").catch(err=>{
@@ -280,7 +294,7 @@ console.error("サービスワーカーの登録に失敗しました", err);
 });
 }
 
-// PDF部品(pdf.js)が読み込めていない場合でも、他の機能が止まらないようにする
+// pdf.jsの初期化
 if(typeof pdfjsLib !== "undefined"){
 try{
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -289,9 +303,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 console.error("pdf.jsの初期化に失敗しました", e);
 }
 }
-
-// 運転免許証の実寸(85.6mm × 54.0mm)の縦横比
-const LICENSE_RATIO = 85.6 / 54.0;
 
 /* ============================================================
    ホーム画面に追加(PWAインストール)
@@ -322,7 +333,7 @@ text.innerHTML = "① 画面下の「共有」ボタン(四角から矢印が出
 actionBtn.style.display = "none";
 }else{
 title.textContent = "ホーム画面に追加する方法";
-text.innerHTML = "お使いのブラウザのメニュー(右上の「⋮」など)を開き、「アプリをインストール」または「ホーム画面に追加」を選んでください。表示されない場合は、ページを最新の状態に更新してから再度お試しください。";
+text.innerHTML = "お使いのブラウザのメニュー(右上の「⋮」など)を開き、「アプリをインストール」または「ホーム画面に追加」を選んでください。";
 actionBtn.style.display = "none";
 }
 
@@ -547,6 +558,9 @@ const yLabel = y === "1" ? "元" : y;
 return `${era}${yLabel}年${m}月${d}日`;
 }
 
+/* ============================================================
+   受付番号・入力反映
+   ============================================================ */
 const ids = [
 "tradeDate","template","staff","name",
 "address","docType","docNo","memo"
@@ -589,7 +603,279 @@ const n = String(Math.floor(Math.random()*900)+100);
 return dateStr + "-" + n;
 }
 
+function formatDateJP(v){
+if(!v) return "";
+const parts = v.split("-");
+if(parts.length !== 3) return v;
+return `${parts[0]}年${parseInt(parts[1],10)}月${parseInt(parts[2],10)}日`;
+}
+
+function updatePaper(){
+pReceipt.textContent = receiptNo.value;
+pDate.textContent = formatDateJP(tradeDate.value);
+pTemplate.textContent = template.value;
+pName.textContent = name.value;
+pAddress.textContent = address.value;
+pBirthday.textContent = getBirthdayText();
+pDocType.textContent = docType.value;
+pDocNo.textContent = docNo.value;
+pStaff.textContent = staff.value;
+pMemo.textContent = memo.value;
+}
+
+ids.forEach(id=>{
+const el = document.getElementById(id);
+el.addEventListener("input", updatePaper);
+el.addEventListener("change", updatePaper);
+});
+
 tradeDate.value = todayStr();
 receiptNo.value = makeReceiptNo();
+updatePaper();
 
-ids.forEach(i
+/* ============================================================
+   画像・PDF読み込み共通処理(余白の自動カット付き)
+   ============================================================ */
+function autoTrim(img){
+try{
+const canvas = document.createElement("canvas");
+canvas.width = img.naturalWidth;
+canvas.height = img.naturalHeight;
+const ctx = canvas.getContext("2d");
+ctx.drawImage(img, 0, 0);
+const w = canvas.width, h = canvas.height;
+const data = ctx.getImageData(0, 0, w, h).data;
+
+// 四隅の色を背景色とみなす
+const corners = [0, (w-1)*4, (h-1)*w*4, ((h-1)*w + (w-1))*4];
+let br=0,bg=0,bb=0;
+corners.forEach(o=>{ br+=data[o]; bg+=data[o+1]; bb+=data[o+2]; });
+br/=4; bg/=4; bb/=4;
+const tol = 32;
+
+function isBg(x,y){
+const o = (y*w + x)*4;
+return Math.abs(data[o]-br)<tol && Math.abs(data[o+1]-bg)<tol && Math.abs(data[o+2]-bb)<tol;
+}
+function rowBg(y){
+let cnt=0, total=0, step=Math.max(1,Math.floor(w/200));
+for(let x=0;x<w;x+=step){ total++; if(isBg(x,y)) cnt++; }
+return cnt/total > 0.96;
+}
+function colBg(x){
+let cnt=0, total=0, step=Math.max(1,Math.floor(h/200));
+for(let y=0;y<h;y+=step){ total++; if(isBg(x,y)) cnt++; }
+return cnt/total > 0.96;
+}
+
+let top=0, bottom=h-1, left=0, right=w-1;
+while(top<bottom && rowBg(top)) top++;
+while(bottom>top && rowBg(bottom)) bottom--;
+while(left<right && colBg(left)) left++;
+while(right>left && colBg(right)) right--;
+
+const cw = right-left+1, ch = bottom-top+1;
+if(cw < w*0.1 || ch < h*0.1) return null; // 切りすぎ防止
+
+const margin = Math.floor(Math.min(cw,ch)*0.01);
+const sx = Math.max(0,left-margin), sy = Math.max(0,top-margin);
+const sw = Math.min(w-sx, cw+margin*2), sh = Math.min(h-sy, ch+margin*2);
+
+const out = document.createElement("canvas");
+out.width = sw; out.height = sh;
+out.getContext("2d").drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+return out.toDataURL("image/jpeg", 0.92);
+}catch(e){
+console.error("自動トリミングに失敗しました", e);
+return null;
+}
+}
+
+// PDFまたは画像ファイルを読み込んでdataURLにして渡す共通関数
+async function loadFileAsImage(file, onDone){
+if(file.type === "application/pdf"){
+if(typeof pdfjsLib === "undefined"){
+alert("PDFの読み込み部品が利用できません。画像(JPEG/PNG)でお試しください。");
+return;
+}
+const buf = await file.arrayBuffer();
+const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+const page = await pdf.getPage(1);
+const viewport = page.getViewport({scale: 2});
+const canvas = document.createElement("canvas");
+canvas.width = viewport.width;
+canvas.height = viewport.height;
+await page.render({canvasContext: canvas.getContext("2d"), viewport}).promise;
+const dataURL = canvas.toDataURL("image/jpeg", 0.92);
+const img = new Image();
+img.onload = ()=>{ onDone(autoTrim(img) || dataURL); };
+img.src = dataURL;
+}else{
+const reader = new FileReader();
+reader.onload = ()=>{
+const img = new Image();
+img.onload = ()=>{ onDone(autoTrim(img) || reader.result); };
+img.src = reader.result;
+};
+reader.readAsDataURL(file);
+}
+}
+
+/* ===== 本人確認書類 ===== */
+function setPreviewImage(dataURL){
+preview.src = dataURL;
+pPreview.src = dataURL;
+}
+
+fileInput.addEventListener("change", async (e)=>{
+const file = e.target.files[0];
+if(!file) return;
+try{
+await loadFileAsImage(file, setPreviewImage);
+}catch(err){
+console.error(err);
+alert("ファイルの読み込みに失敗しました。別のファイル形式(JPEG/PNG)でお試しください。");
+}
+});
+
+/* ===== 仕切書 ===== */
+function setShikirImage(dataURL){
+shikirPreview.src = dataURL;
+pShikir.src = dataURL;
+}
+
+shikirInput.addEventListener("change", async (e)=>{
+const file = e.target.files[0];
+if(!file) return;
+try{
+await loadFileAsImage(file, setShikirImage);
+}catch(err){
+console.error(err);
+alert("仕切書の読み込みに失敗しました。別のファイル形式(JPEG/PNG)でお試しください。");
+}
+});
+
+/* ============================================================
+   免許証の位置指定トリミング(ドラッグ選択)
+   ============================================================ */
+let cropStart = null;
+let cropSel = null;
+
+function openCropper(){
+if(!preview.src || preview.src === location.href){
+alert("先に本人確認書類の画像をアップロードしてください。");
+return;
+}
+cropImage.src = preview.src;
+cropRect.style.display = "none";
+cropSel = null;
+cropModal.classList.add("show");
+}
+
+function closeCropper(){
+cropModal.classList.remove("show");
+}
+
+function stagePos(ev){
+const r = cropImage.getBoundingClientRect();
+const x = Math.min(Math.max(ev.clientX - r.left, 0), r.width);
+const y = Math.min(Math.max(ev.clientY - r.top, 0), r.height);
+return {x, y};
+}
+
+cropStage.addEventListener("pointerdown", (ev)=>{
+if(!cropImage.src) return;
+ev.preventDefault();
+cropStage.setPointerCapture(ev.pointerId);
+cropStart = stagePos(ev);
+cropSel = null;
+cropRect.style.display = "none";
+});
+
+cropStage.addEventListener("pointermove", (ev)=>{
+if(!cropStart) return;
+ev.preventDefault();
+const p = stagePos(ev);
+const left = Math.min(cropStart.x, p.x);
+const top = Math.min(cropStart.y, p.y);
+const wSel = Math.abs(p.x - cropStart.x);
+const hSel = Math.abs(p.y - cropStart.y);
+
+const imgRect = cropImage.getBoundingClientRect();
+const stageRect = cropStage.getBoundingClientRect();
+const offX = imgRect.left - stageRect.left;
+const offY = imgRect.top - stageRect.top;
+
+cropRect.style.left = (offX + left) + "px";
+cropRect.style.top = (offY + top) + "px";
+cropRect.style.width = wSel + "px";
+cropRect.style.height = hSel + "px";
+cropRect.style.display = "block";
+
+cropSel = {left, top, w: wSel, h: hSel};
+});
+
+cropStage.addEventListener("pointerup", ()=>{
+cropStart = null;
+});
+
+function confirmCrop(){
+if(!cropSel || cropSel.w < 10 || cropSel.h < 10){
+alert("免許証の周りをドラッグして囲んでください。");
+return;
+}
+const scaleX = cropImage.naturalWidth / cropImage.clientWidth;
+const scaleY = cropImage.naturalHeight / cropImage.clientHeight;
+
+const sx = cropSel.left * scaleX;
+const sy = cropSel.top * scaleY;
+const sw = cropSel.w * scaleX;
+const sh = cropSel.h * scaleY;
+
+const canvas = document.createElement("canvas");
+canvas.width = sw;
+canvas.height = sh;
+canvas.getContext("2d").drawImage(cropImage, sx, sy, sw, sh, 0, 0, sw, sh);
+setPreviewImage(canvas.toDataURL("image/jpeg", 0.92));
+closeCropper();
+}
+
+/* ============================================================
+   JPEG保存・入力クリア
+   ============================================================ */
+async function saveAsJPEG(){
+updatePaper();
+try{
+const canvas = await html2canvas(document.getElementById("paper"), {scale: 2, useCORS: true, backgroundColor: "#ffffff"});
+const link = document.createElement("a");
+link.download = "取引確認書_" + (receiptNo.value || "無番号") + ".jpg";
+link.href = canvas.toDataURL("image/jpeg", 0.92);
+link.click();
+}catch(e){
+console.error(e);
+alert("JPEGの保存に失敗しました。もう一度お試しください。");
+}
+}
+
+function clearForm(){
+if(!confirm("入力内容をすべてクリアして新規作成しますか？")) return;
+name.value = "";
+address.value = "";
+docNo.value = "";
+memo.value = "";
+birthdayYear.value = "";
+birthdayMonth.value = "";
+birthdayDay.value = "";
+fileInput.value = "";
+shikirInput.value = "";
+preview.removeAttribute("src");
+pPreview.removeAttribute("src");
+shikirPreview.removeAttribute("src");
+pShikir.removeAttribute("src");
+tradeDate.value = todayStr();
+receiptNo.value = makeReceiptNo();
+updatePaper();
+}
+</script>
+</body>
+</html>
